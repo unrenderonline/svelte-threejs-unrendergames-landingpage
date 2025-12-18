@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="64" viewBox="0 0 240 64">
+  <rect width="240" height="64" rx="8" fill="#0a0311" />
+  <g transform="translate(18,8)">
+    <circle cx="24" cy="24" r="18" fill="#f5a623" />
+    <text x="56" y="32" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="20">Unrender</text>
+  </g>
+</svg>

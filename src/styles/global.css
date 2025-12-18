@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global resets to prevent horizontal scroll and ensure consistent box model */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #svelte {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  /* Apple-like minimalist system font stack */
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* theme variables */
+  --unrender-purple: #0a0311;
+  --unrender-accent: #f5a623;
+
+  background: radial-gradient(ellipse at center, var(--unrender-purple) 0%, #030409 100%);
+  color: white;
+}

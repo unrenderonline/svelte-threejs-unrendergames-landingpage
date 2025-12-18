@@ -1,0 +1,23 @@
+node_modules
+
+# Standard SvelteKit ignores
+.DS_Store
+.env
+.env.*
+!.env.example
+.svelte-kit/
+build/
+package/
+.vercel/
+.netlify/
+.cloudflare/
+
+# Build artifacts accidentally copied to root
+_app/
+audiovisual.html
+fortnite.html
+jogos.html
+modelagem-3d.html
+roblox.html
+vfx.html
+web-interativa.html

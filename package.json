@@ -1,0 +1,28 @@
+{
+  "name": "svelte-threejs-landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview --port 5173"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.48.5",
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27",
+    "svelte": "^5.0.0",
+    "svelte-preprocess": "^6.0.3",
+    "tailwindcss": "^3.3.3",
+    "vite": "^7.2.2"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0",
+    "gsap": "^3.12.2",
+    "p5": "^2.1.1",
+    "three": "^0.158.0"
+  }
+}
