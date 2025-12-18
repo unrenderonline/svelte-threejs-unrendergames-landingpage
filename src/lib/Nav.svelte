@@ -103,7 +103,7 @@
             >
                 <img
                     class="w-10 h-10 object-contain"
-                    src="images/unrender-logo-small.png"
+                    src="/images/unrender-logo-small.png"
                     alt="Unrender Logo"
                 />
                 <span>UNRENDER</span>
