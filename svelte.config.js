@@ -15,7 +15,8 @@ const config = {
     }),
     alias: {
       $lib: 'src/lib'
-    }
+    },
+    appDir: 'internal'
   }
 };
 
