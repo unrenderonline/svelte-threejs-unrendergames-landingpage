@@ -11,6 +11,7 @@
   let canvas;
   let scene, camera, renderer;
   let model, mixer;
+  let dirLight; // Global light for updates
   let actions = {};
   let activeAction, previousAction;
   let clock = new THREE.Clock();
@@ -266,6 +267,82 @@
 
   // Pause State
   let isPaused = false;
+  let showConfigModal = false;
+
+  // Graphics Settings
+  let graphicsSettings = {
+    shadows: "high", // 'off', 'low', 'high'
+    resolution: 1.0, // 0.5 to 1.0 (Pixel Ratio)
+    antialiasing: true, // MSAA
+  };
+
+  function toggleConfig() {
+    showConfigModal = !showConfigModal;
+    // Pause game when opening config if not already paused?
+    // Optionally: if (showConfigModal && !isPaused) togglePause();
+  }
+
+  function applyGraphicsSettings() {
+    if (!renderer) return;
+
+    // 1. Resolution (FSR Simulation)
+    // Adjust pixel ratio. Standard usage is window.devicePixelRatio (usually 1 or more).
+    // We will scale it.
+    const baseRatio = window.devicePixelRatio;
+    const targetRatio = baseRatio * graphicsSettings.resolution;
+    renderer.setPixelRatio(targetRatio);
+
+    // 2. Shadows
+    switch (graphicsSettings.shadows) {
+      case "off":
+        renderer.shadowMap.enabled = false;
+        break;
+      case "low":
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.BasicShadowMap;
+        break;
+      case "high":
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        break;
+      case "crisp":
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        updateShadowCamera(200, 4096);
+        break;
+      case "ultra":
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        updateShadowCamera(150, 4096); // Tighter bounds = Higher Res
+        break;
+      case "epic":
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        updateShadowCamera(150, 8192); // 8K Texture
+        break;
+      case "nightmare":
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        updateShadowCamera(100, 8192); // 8K + Tight Bounds = Extreme Density
+        break;
+    }
+
+    // 3. Antialiasing
+
+    // WebGLRenderer constructor 'antialias' is fixed at creation.
+    // We cannot toggle native MSAA at runtime easily without recreating renderer.
+    // So we might skip this for now or use post-processing if we had it.
+    // For now, let's just log it or handle it if we have a pass.
+    console.log("Applied Graphics Settings:", graphicsSettings);
+
+    // Re-render immediately to show changes
+    // scene.traverse helps update shadow materials
+    scene.traverse((child) => {
+      if (child.material) {
+        if (child.material.isMaterial) child.material.needsUpdate = true;
+      }
+    });
+  }
 
   function togglePause() {
     if (showGameOverModal) return; // Cannot pause on Game Over (it's already effectively paused)
@@ -470,6 +547,27 @@
     }
   }
 
+  function updateShadowCamera(size, mapSize) {
+    if (!dirLight) return;
+
+    // Dispose old map to prevent memory leaks and ensure resize
+    if (dirLight.shadow.map) {
+      dirLight.shadow.map.dispose();
+      dirLight.shadow.map = null;
+    }
+
+    dirLight.shadow.camera.top = size;
+    dirLight.shadow.camera.bottom = -size;
+    dirLight.shadow.camera.left = -size;
+    dirLight.shadow.camera.right = size;
+    dirLight.shadow.mapSize.width = mapSize;
+    dirLight.shadow.mapSize.height = mapSize;
+    dirLight.shadow.camera.updateProjectionMatrix();
+
+    // Force updates
+    if (renderer) renderer.shadowMap.needsUpdate = true;
+  }
+
   // Shader Code
 
   onMount(() => {
@@ -507,9 +605,21 @@
     fireballHitSound = new Audio("/audio/fireball-hit.wav");
     thunderSound = new Audio("/audio/thunder.m4a");
 
+    // New Sounds
+    zombieIdleSound = new Audio("/audio/zombie-idle.m4a");
+    zombieHitSound = new Audio("/audio/zombie-hit.m4a");
+    zombieDieSound = new Audio("/audio/zombie-die.m4a");
+    fireballThrowSound = new Audio("/audio/fireball-trow.wav");
+    fireballHitSound = new Audio("/audio/fireball-hit.wav");
+    thunderSound = new Audio("/audio/thunder.m4a");
+
     bgMusic = new Audio("/audio/conker-windy-theme.mp3");
     bgMusic.loop = true;
     bgMusic.volume = volBgMusic; // Low background music
+
+    // Audio Warmup on Interaction
+    window.addEventListener("click", onFirstInteraction, { once: true });
+    window.addEventListener("keydown", onFirstInteraction, { once: true });
 
     // Set volumes
     typeSounds.forEach((s) => {
@@ -679,7 +789,7 @@
     hemiLight.position.set(0, 200, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfffbdd, 3.5);
+    dirLight = new THREE.DirectionalLight(0xfffbdd, 3.5);
     dirLight.position.set(50, 100, 50);
     dirLight.castShadow = true;
     dirLight.shadow.bias = -0.001;
@@ -690,7 +800,15 @@
     dirLight.shadow.camera.bottom = -300;
     dirLight.shadow.camera.left = -300;
     dirLight.shadow.camera.right = 300;
+    dirLight.shadow.camera.right = 300;
     scene.add(dirLight);
+
+    // [OPTIMIZATION] Persistent Warmup Light
+    // Keeps "PointLight" shader permutation active to prevent
+    // massive recompilation when the first Fireball/Thunder is cast.
+    const warmupLight = new THREE.PointLight(0xffaa00, 0.01, 0.1);
+    warmupLight.position.set(0, -10, 0); // Hidden underground
+    scene.add(warmupLight);
 
     createClouds();
     createBirds();
@@ -702,7 +820,7 @@
       isLoading = false;
 
       // Pre-compile VFX shaders to prevent stutter
-      warmupVFX();
+      warmupShaders();
 
       // Fix initial floating/falling: Ensure player is on ground if possible
       // Or just let physics handle it naturally now that collision is ready.
@@ -972,7 +1090,14 @@
     }
   }
 
-  function warmupVFX() {
+  function onFirstInteraction() {
+    window.removeEventListener("click", onFirstInteraction);
+    window.removeEventListener("keydown", onFirstInteraction);
+    warmupAudio();
+  }
+
+  function warmupAudio() {
+    console.log("Warming up audio...");
     // 1. Audio Warmup (Prevent First-Play Lag)
     const soundsToWarmup = [
       fireballThrowSound,
@@ -981,7 +1106,6 @@
       zombieIdleSound,
       zombieHitSound,
       zombieDieSound,
-      // Add particle/explosion sounds if any specific ones exist besides fireballHit
     ];
 
     soundsToWarmup.forEach((sound) => {
@@ -989,15 +1113,23 @@
         // Play at 0 volume to force decoding
         const originalVol = sound.volume;
         sound.volume = 0;
-        sound.play().catch(() => {});
+        sound.play().catch((e) => {
+          // If this fails, it's likely user interactions weren't sufficient yet,
+          // but we tried our best.
+          console.warn("Audio warmup skipped:", e);
+        });
         // Stop immediately
         setTimeout(() => {
           sound.pause();
           sound.currentTime = 0;
           sound.volume = originalVol;
-        }, 10);
+        }, 50); // Give it a tiny bit of time to start decoding buffer
       }
     });
+  }
+
+  function warmupShaders() {
+    console.log("Warming up shaders...");
 
     // 2. Geometry & Shader Warmup
     // Pre-create fireball geometry and material
@@ -1031,17 +1163,14 @@
 
     // A. Fireball
     const dummyFireball = new THREE.Mesh(fireballGeometry, fireballMaterial);
-    const dummyLight = new THREE.PointLight(0xffaa00, 2, 5);
-    dummyFireball.add(dummyLight);
-    dummyGroup.add(dummyFireball);
+    dummyGroup.add(dummyFireball); // Light added below for permutations
 
-    // B. Thunder (TubeGeometry) - Complex geometry often causes stutter
-    // Create a simple path for the tube
+    // B. Thunder
     const path = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 1, 0),
     ]);
-    const tubeGeo = new THREE.TubeGeometry(path, 2, 0.08, 8, false);
+    const tubeGeo = new THREE.TubeGeometry(path, 10, 0.08, 8, false); // Match runtime segments (10)
     const dummyThunder = new THREE.Mesh(tubeGeo, thunderMaterial);
     const dummyThunderGlow = new THREE.Mesh(tubeGeo, thunderGlowMaterial);
     dummyGroup.add(dummyThunder);
@@ -1052,24 +1181,38 @@
     const dummyParticle = new THREE.Mesh(boxGeo, particleMaterial);
     dummyGroup.add(dummyParticle);
 
-    // Position far away
-    dummyGroup.position.set(0, -5000, 0);
+    // Position: Put them IN FRUSTUM but tiny/invisible to ensure they are processed
+    dummyGroup.position.set(0, -2, 0); // Just below ground
+    dummyGroup.scale.set(0.001, 0.001, 0.001);
     scene.add(dummyGroup);
 
-    // Force a render to compile shaders
-    // Note: renderer.compile is preferred over render() for this
+    // [PERMUTATION 1] Base State (WarmupLight only)
+    renderer.compile(scene, camera);
+
+    // [PERMUTATION 2] Combat State (WarmupLight + Fireball Light)
+    // Add extra light to simulate "Multiple Lights" scenario
+    const dummyLight = new THREE.PointLight(0xffaa00, 2, 5);
+    dummyFireball.add(dummyLight);
+    renderer.compile(scene, camera);
+
+    // [PERMUTATION 3] Heavy Combat State (Multiple lights)
+    // Add a few more lights to ensure shader can handle array expansion if dynamic
+    const dummyLight2 = new THREE.PointLight(0x00ffff, 2, 5);
+    const dummyLight3 = new THREE.PointLight(0xff0000, 2, 5);
+    dummyGroup.add(dummyLight2);
+    dummyGroup.add(dummyLight3);
     renderer.compile(scene, camera);
 
     // Cleanup
     scene.remove(dummyGroup);
     dummyLight.dispose();
+    dummyLight2.dispose();
+    dummyLight3.dispose();
+
     dummyGroup.traverse((child) => {
       if (child.isMesh) {
         if (child.geometry) child.geometry.dispose();
         // Don't dispose materials we want to keep reusing!
-        // But we can dispose the dummy particle material if we create new ones every time.
-        // In this code, particle materials ARE created new every time (bad practice but existing).
-        // So we should at least compile 'MeshBasicMaterial' with these settings.
       }
     });
 
@@ -1078,7 +1221,7 @@
     boxGeo.dispose();
     particleMaterial.dispose(); // Dispose this temp one
 
-    console.log("VFX warmup complete - shaders & audio pre-loaded");
+    console.log("VFX warmup complete - shaders pre-loaded");
   }
 
   function createCartouches() {
@@ -4727,6 +4870,101 @@
         : 'fa-pause'} text-xl w-6 h-6 flex items-center justify-center"
     ></i>
   </button>
+
+  <!-- Config Button (Below Pause Button) -->
+  <button
+    class="fixed top-40 right-4 z-50 p-3 rounded-full glass-panel text-white hover:bg-white/20 transition-all active:scale-95"
+    on:click={toggleConfig}
+    aria-label="Graphics Settings"
+  >
+    <i class="fas fa-cog text-xl w-6 h-6 flex items-center justify-center"></i>
+  </button>
+
+  <!-- Configuration Modal -->
+  {#if showConfigModal}
+    <div
+      class="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center"
+      on:click|self={() => (showConfigModal = false)}
+    >
+      <div
+        class="glass-panel w-full max-w-md p-6 rounded-2xl border border-white/20 shadow-2xl transform scale-100 animate-fadeIn"
+      >
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+            <i class="fas fa-desktop text-blue-400"></i>
+            Graphics Settings
+          </h2>
+          <button
+            class="text-white/60 hover:text-white transition-colors"
+            on:click={() => (showConfigModal = false)}
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Resolution / FSR -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-white">
+              <label class="font-medium flex items-center gap-2">
+                <i class="fas fa-bolt text-yellow-400"></i>
+                Resolution Scale (FSR)
+              </label>
+              <span class="text-sm font-mono text-blue-300"
+                >{Math.round(graphicsSettings.resolution * 100)}%</span
+              >
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="1.0"
+              step="0.05"
+              bind:value={graphicsSettings.resolution}
+              on:change={applyGraphicsSettings}
+              class="w-full volume-slider h-3 rounded-lg appearance-none cursor-pointer"
+              style="--value: {(graphicsSettings.resolution - 0.5) * 200}%"
+            />
+            <p class="text-xs text-white/50">
+              Lower resolution improves performance significantly.
+            </p>
+          </div>
+
+          <!-- Shadow Quality -->
+          <div class="space-y-3">
+            <label class="font-medium text-white flex items-center gap-2">
+              <i class="fas fa-ghost text-purple-400"></i>
+              Shadow Quality
+            </label>
+            <div class="grid grid-cols-7 gap-2">
+              {#each ["off", "low", "high", "crisp", "ultra", "epic", "nightmare"] as mode}
+                <button
+                  class="px-1 py-2 rounded-lg border text-[8px] font-bold transition-all uppercase tracking-tighter
+                  {graphicsSettings.shadows === mode
+                    ? 'bg-blue-600/50 border-blue-400 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}"
+                  on:click={() => {
+                    graphicsSettings.shadows = mode;
+                    applyGraphicsSettings();
+                  }}
+                >
+                  {mode.toUpperCase()}
+                </button>
+              {/each}
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-white/10 flex justify-end">
+          <button
+            class="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-105"
+            on:click={() => (showConfigModal = false)}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   {#if isPaused}
     <div

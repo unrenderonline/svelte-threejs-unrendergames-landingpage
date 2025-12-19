@@ -14,6 +14,7 @@
   let mixer;
   let clock = new THREE.Clock();
   let clouds = [];
+  let animationId;
 
   // Shader Code
 
@@ -379,6 +380,7 @@
 
   onDestroy(() => {
     if (browser) {
+      if (animationId) cancelAnimationFrame(animationId);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
       document.body.style.overflowX = "";
@@ -736,7 +738,7 @@
   }
 
   function animate() {
-    requestAnimationFrame(animate);
+    if (!renderer) return;
 
     const delta = clock.getDelta();
     const time = clock.getElapsedTime();
@@ -756,10 +758,19 @@
       }
     });
 
-    camera.position.x = Math.sin(time * 0.1) * 10;
-    camera.lookAt(0, 15, 0);
+    if (camera) {
+      camera.position.x = Math.sin(time * 0.1) * 10;
+      camera.lookAt(0, 15, 0);
+    }
 
-    renderer.render(scene, camera);
+    if (renderer && scene && camera) {
+      renderer.render(scene, camera);
+    }
+
+    // Schedule next frame ONLY if renderer is still valid
+    if (renderer) {
+      animationId = requestAnimationFrame(animate);
+    }
   }
 
   function flock(bird, flockBirds) {

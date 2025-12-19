@@ -13,7 +13,7 @@ package/
 .cloudflare/
 
 # Build artifacts accidentally copied to root
-_app/
+/_app/
 audiovisual.html
 fortnite.html
 jogos.html
