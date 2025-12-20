@@ -220,7 +220,7 @@
             await avatar.init();
             avatar.gltf.scene.scale.set(2, 2, 2);
 
-            scene.add(avatar.gltf.scene);
+            // scene.add(avatar.gltf.scene);
 
             camera.position.set(0, 0, 3);
             avatar.gltf.scene.position.set(0, -0.3, 0);
@@ -235,12 +235,9 @@
                         avatar.updateBlendshapes(estimate.blendshapes);
                     }
                 } else {
+                    // IDLE MODE: No 3D model visible (GIF shows)
                     if (avatar && avatar.gltf) {
-                        avatar.gltf.scene.position.y =
-                            -0.3 + Math.sin(t * 2) * 0.02;
-                        avatar.gltf.scene.rotation.y = Math.sin(t * 0.5) * 0.1;
-                        avatar.gltf.scene.rotation.x = 0;
-                        avatar.gltf.scene.rotation.z = 0;
+                        // Ensure it's hidden if somehow present, or just do nothing as it shouldn't be in scene
                     }
                 }
                 renderer.render(scene, camera);
@@ -290,11 +287,7 @@
         // Move Avatar back to Scene (Idle)
         if (avatar && faceAnchor) {
             faceAnchor.group.remove(avatar.gltf.scene);
-            mindarThree.scene.add(avatar.gltf.scene);
-
-            // Reset for Idle
-            avatar.gltf.scene.position.set(0, -0.3, 0);
-            avatar.gltf.scene.rotation.set(0, 0, 0);
+            // mindarThree.scene.add(avatar.gltf.scene); // Don't add back to scene, we go to GIF
         }
 
         // Hide video if it persists
@@ -462,12 +455,20 @@
         {/if}
     </div>
 
+    {#if !isRunning}
+        <img
+            src="/images/mocap.gif"
+            alt="Mocap Preview"
+            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover pointer-events-none z-20"
+        />
+    {/if}
+
     <!-- Loading Spinner -->
     {#if isLoading}
         <div
             class="absolute z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
         >
-            <Spinner />
+            <Spinner showText={false} />
         </div>
     {/if}
 </div>

@@ -140,20 +140,14 @@
             face1Texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
             // Face 2: Bottom (Rotates up)
-            // Removed rotation so text is upright relative to the shared edge
-            const face2Canvas = createTextTexture(
-                "ANIMATION & VIRTUAL\n\nPrerender Scene Making\nCartoons & Animation Process\nVirtual Puppetry\nReal-time Game Engines\nMotion Capture & Control",
-                "#ffffff",
-                bgColor,
-            );
-            const face2Texture = new THREE.CanvasTexture(face2Canvas);
-            face2Texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            // Text removed as per request. Using black material matching other sides.
+            // const face2Canvas = createTextTexture(...) -> Removed
 
             const materials = [
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Right
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Left
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Top
-                new THREE.MeshBasicMaterial({ map: face2Texture }), // Bottom (Face 2)
+                new THREE.MeshBasicMaterial({ color: 0x000000 }), // Bottom (Face 2) - Changed to Color
                 new THREE.MeshBasicMaterial({ map: face1Texture }), // Front (Face 1)
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Back
             ];
@@ -199,6 +193,7 @@
             mocapDiv.style.justifyContent = "center";
             mocapDiv.style.padding = "2rem";
             mocapDiv.style.boxSizing = "border-box";
+            mocapDiv.style.opacity = "0"; // Start hidden to prevent perspective leak
 
             // Create Layout Container
             const layoutContainer = document.createElement("div");
@@ -208,39 +203,31 @@
             layoutContainer.style.overflow = "hidden"; // Keep content inside face
             mocapDiv.appendChild(layoutContainer);
 
-            // Helper to animate Orbiting
-            const animateOrbit = (
+            // Helper to animate Local Orbit (Text + GIF pair)
+            const animateLocalOrbit = (
                 el,
-                radiusX,
-                radiusY,
+                cx,
+                cy,
+                radius,
                 duration,
-                centerX,
-                centerY,
-                scale = 1,
+                startAngle = 0,
             ) => {
-                const phase = Math.random() * Math.PI * 2;
-                const proxy = { t: 0 };
-
-                // Randomize direction
-                const direction = Math.random() > 0.5 ? 1 : -1;
+                const proxy = { angle: startAngle };
 
                 gsap.to(proxy, {
-                    t: Math.PI * 2 * direction,
+                    angle: startAngle + Math.PI * 2,
                     duration: duration,
                     repeat: -1,
                     ease: "none",
                     onUpdate: () => {
-                        const currentT = proxy.t + phase;
-                        // Ellptical orbit
                         const x =
-                            centerX +
-                            Math.cos(currentT) * radiusX -
+                            cx +
+                            Math.cos(proxy.angle) * radius -
                             el.offsetWidth / 2;
                         const y =
-                            centerY +
-                            Math.sin(currentT) * radiusY -
+                            cy +
+                            Math.sin(proxy.angle) * radius -
                             el.offsetHeight / 2;
-
                         el.style.left = `${x}px`;
                         el.style.top = `${y}px`;
                     },
@@ -249,10 +236,10 @@
 
             // GIFs
             const gifPaths = [
-                "/images/fortnite_dance.gif",
-                "/images/fortnite_dance2.gif",
-                "/images/roblox-dance.gif",
-                "/images/icegif-1248.gif",
+                "/images/mocap3.gif", // Swapped
+                "/images/mocap2.gif", // Swapped
+                "/images/mocap4.gif",
+                "/images/mocap5.gif",
             ];
 
             const centerX = targetWidth / 2;
@@ -260,9 +247,15 @@
 
             // --- TEXT ELEMENTS ---
             const textData = [
-                { title: "Spatial Motion", desc: "Real-time facial tracking" },
-                { title: "Interactive 3D", desc: "Immersive web experiences" },
-                { title: "Gesture Control", desc: "Next-gen UI interaction" },
+                {
+                    title: "Fullbody Tracking",
+                    desc: "Captura de movimento corporal",
+                },
+                {
+                    title: "Metahuman Animator",
+                    desc: "Captura de movimento e personagens realistas",
+                },
+                { title: "Avatar Digital", desc: "Animações em tempo real" },
             ];
 
             const createTextGroup = (data) => {
@@ -297,20 +290,27 @@
                 return container;
             };
 
-            // Create and Orbit Text Groups
+            // Cluster Centers
+            // Top Center (Moved down for navbar)
+            const topCluster = { x: centerX, y: centerY - 280 };
+            // Left Cluster
+            const leftCluster = { x: centerX - 450, y: centerY + 150 };
+            // Right Cluster
+            const rightCluster = { x: centerX + 450, y: centerY + 150 };
+
+            const clusters = [topCluster, leftCluster, rightCluster];
+
+            // Create and Animate Text Groups (Orbiting their cluster center)
             textData.forEach((data, i) => {
                 const el = createTextGroup(data);
                 layoutContainer.appendChild(el);
 
-                // Slower orbit for text
-                // Larger radius to float outside/around mocap
-                // Duration: 40-60s (Very slow)
-                const radiusX = 350 + Math.random() * 100;
-                const radiusY = 250 + Math.random() * 50;
-                const duration = 40 + Math.random() * 20;
+                const center = clusters[i] || topCluster;
+                const radius = 60;
+                const duration = 15 + Math.random() * 5;
 
-                // We pass element, radii, duration, center
-                animateOrbit(el, radiusX, radiusY, duration, centerX, centerY);
+                // Start Text at Angle 0 (Right of center), GIF will be at PI (Left)
+                animateLocalOrbit(el, center.x, center.y, radius, duration, 0);
             });
 
             // --- MOCAP CONTAINER (CENTER) ---
@@ -340,8 +340,16 @@
                 ease: "sine.inOut",
             });
 
-            // --- ORBITING GIFS ---
+            // --- LOCAL ORBITING GIFS (Paired with Text) ---
             gifPaths.forEach((src, i) => {
+                // If we have more GIFs than clusters, we can just place them elsewhere or loop?
+                // Let's handle first 3 primarily.
+                const center = clusters[i];
+                if (!center && i > 2) return; // Skip or handle extra? Let's just create 3 for the pairs.
+                // Actually, 4th GIF could be central/bottom?
+                // Let's just loop clusters to keep activity.
+                const targetCenter = clusters[i % 3];
+
                 const img = document.createElement("img");
                 img.src = src;
                 img.style.width = "150px";
@@ -350,18 +358,29 @@
                 img.style.borderRadius = "1rem";
                 img.style.position = "absolute";
                 img.style.zIndex = "10";
-                img.style.opacity = "0.9";
+                img.style.opacity = "0.8";
 
                 layoutContainer.appendChild(img);
 
-                // Slower Orbit parameters for GIFs
-                // Duration: 25-40s (Slower than before)
-                const radiusX = 400 + Math.random() * 100;
-                const radiusY = 300 + Math.random() * 50;
-                const duration = 25 + Math.random() * 15;
+                const radius = 60;
+                // Same duration as text for synchronized "chasing" or orbiting around each other
+                // But Text was 15-20s. We should match duration for the pair i.
+                // Ideally we'd store the duration. Let's re-randomize but keep similar range.
+                // To make them "move around each other", they should share the same center and duration.
+                // Re-calculating duration here won't sync them perfectly.
+                // Ideally we iterate clusters. But logic structure is split.
+                // Let's just use specific duration logic or make them independent orbits around same point.
+                const duration = 15 + Math.random() * 5;
 
-                // We pass element, radii, duration, center
-                animateOrbit(img, radiusX, radiusY, duration, centerX, centerY);
+                // Start GIF at Angle PI (Opposite to Text)
+                animateLocalOrbit(
+                    img,
+                    targetCenter.x,
+                    targetCenter.y,
+                    radius,
+                    duration,
+                    Math.PI,
+                );
             });
 
             // We move the existing svelte component container INTO this div?
@@ -501,17 +520,15 @@
                 // Rotate X by -90 degrees (-PI/2)
                 // We want the Bottom face to come to the front.
                 // A negative rotation around X moves the Bottom face towards the camera.
-                const rotationTween = gsap.to(cube.rotation, {
-                    x: -Math.PI / 2, // Rotate -90 degrees to show Bottom face
-                    ease: "none",
+                // Create Timeline for sync
+                const tl = gsap.timeline({
                     scrollTrigger: {
                         trigger: scrollContainer,
                         start: "top top",
-                        end: "bottom-=100 bottom", // Complete rotation slightly before end to ensure full turn
+                        end: "bottom-=100 bottom",
                         scrub: 0.5,
                         pin: false,
                         onUpdate: (self) => {
-                            // Show Mocap when progress is near the end (Face 2 visible)
                             if (self.progress > 0.8) {
                                 showMocap = true;
                             } else {
@@ -520,6 +537,21 @@
                         },
                     },
                 });
+
+                tl.to(cube.rotation, {
+                    x: -Math.PI / 2, // Rotate -90 degrees
+                    ease: "none",
+                }).to(
+                    mocapDiv.style,
+                    {
+                        opacity: "1",
+                        ease: "none",
+                    },
+                    "<",
+                ); // Run in parallel
+
+                // Reference for cleanup (using the timeline/scrolltrigger)
+                const rotationTween = tl;
 
                 scrollCleanup = () => {
                     rotationTween.kill();

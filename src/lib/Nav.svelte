@@ -214,114 +214,114 @@
                 </ul>
             </div>
         </div>
-
-        <!-- Mobile menu overlay backdrop -->
-        {#if isMobileMenuOpen}
-            <div
-                class="fixed inset-0 bg-black/50 z-[55] transition-opacity duration-300"
-                on:click={closeMobileMenu}
-                role="button"
-                tabindex="0"
-                on:keydown={(e) => e.key === "Enter" && closeMobileMenu()}
-                aria-label="Close menu"
-            ></div>
-        {/if}
-
-        <!-- Mobile menu container (Drawer) -->
-        <div
-            class="fixed top-0 right-0 h-full w-64 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out"
-            class:translate-x-0={isMobileMenuOpen}
-            class:translate-x-full={!isMobileMenuOpen}
-            class:hidden={!isMobile && !isMobileMenuOpen}
-        >
-            <div class="flex flex-col h-full">
-                <div class="flex justify-end p-4">
-                    <button
-                        on:click={closeMobileMenu}
-                        class="p-2 text-gray-500 hover:text-gray-900 transition-colors"
-                        aria-label="Close menu"
-                    >
-                        <svg
-                            class="w-6 h-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </button>
-                </div>
-
-                <ul class="py-2 space-y-1 overflow-y-auto">
-                    <li>
-                        <a
-                            class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
-                            href="/"
-                            on:click={handleNavigation}>INICIO</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
-                            href="/jogos"
-                            on:click={handleNavigation}>Jogos</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
-                            href="/web-interativa"
-                            on:click={handleNavigation}>Web Interativa</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
-                            href="/modelagem-3d"
-                            on:click={handleNavigation}>Modelagem 3D</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
-                            href="/fortnite"
-                            on:click={handleNavigation}>Fortnite</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
-                            href="/roblox"
-                            on:click={handleNavigation}>Roblox</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
-                            href="/audiovisual"
-                            on:click={handleNavigation}>AudioVisual</a
-                        >
-                    </li>
-                    <li>
-                        <button
-                            type="button"
-                            class="block w-full text-left px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent bg-transparent border-0"
-                            on:click={() => {
-                                closeMobileMenu();
-                                openContact();
-                            }}>Contato</button
-                        >
-                    </li>
-                </ul>
-            </div>
-        </div>
     </div>
 </nav>
+
+<!-- Mobile menu overlay backdrop -->
+{#if isMobileMenuOpen}
+    <div
+        class="fixed inset-0 bg-black/50 z-[55] transition-opacity duration-300"
+        on:click={closeMobileMenu}
+        role="button"
+        tabindex="0"
+        on:keydown={(e) => e.key === "Enter" && closeMobileMenu()}
+        aria-label="Close menu"
+    ></div>
+{/if}
+
+<!-- Mobile menu container (Drawer) -->
+<div
+    class="fixed top-0 right-0 h-full w-64 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out"
+    class:translate-x-0={isMobileMenuOpen}
+    class:translate-x-full={!isMobileMenuOpen}
+    class:hidden={!isMobile && !isMobileMenuOpen}
+>
+    <div class="flex flex-col h-full">
+        <div class="flex justify-end p-4">
+            <button
+                on:click={closeMobileMenu}
+                class="p-2 text-gray-500 hover:text-gray-900 transition-colors"
+                aria-label="Close menu"
+            >
+                <svg
+                    class="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                    />
+                </svg>
+            </button>
+        </div>
+
+        <ul class="py-2 space-y-1 overflow-y-auto">
+            <li>
+                <a
+                    class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
+                    href="/"
+                    on:click={handleNavigation}>INICIO</a
+                >
+            </li>
+            <li>
+                <a
+                    class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
+                    href="/jogos"
+                    on:click={handleNavigation}>Jogos</a
+                >
+            </li>
+            <li>
+                <a
+                    class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
+                    href="/web-interativa"
+                    on:click={handleNavigation}>Web Interativa</a
+                >
+            </li>
+            <li>
+                <a
+                    class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
+                    href="/modelagem-3d"
+                    on:click={handleNavigation}>Modelagem 3D</a
+                >
+            </li>
+            <li>
+                <a
+                    class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
+                    href="/fortnite"
+                    on:click={handleNavigation}>Fortnite</a
+                >
+            </li>
+            <li>
+                <a
+                    class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
+                    href="/roblox"
+                    on:click={handleNavigation}>Roblox</a
+                >
+            </li>
+            <li>
+                <a
+                    class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
+                    href="/audiovisual"
+                    on:click={handleNavigation}>AudioVisual</a
+                >
+            </li>
+            <li>
+                <button
+                    type="button"
+                    class="block w-full text-left px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent bg-transparent border-0"
+                    on:click={() => {
+                        closeMobileMenu();
+                        openContact();
+                    }}>Contato</button
+                >
+            </li>
+        </ul>
+    </div>
+</div>
 
 <ContactModal />
 

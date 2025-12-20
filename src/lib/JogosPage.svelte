@@ -251,7 +251,7 @@
   let volZombie = 0.2; // New Zombie volume
   let volMaster = 1.0; // Global Master Volume
 
-  let showAudioMixer = true; // Show/hide audio mixer HUD
+  let showAudioMixer = false; // Hidden by default
   let showVolumeSlider = false; // Legacy slider visibility
 
   let attackMode = null; // 'fireball' or 'thunder'
@@ -276,10 +276,25 @@
     antialiasing: true, // MSAA
   };
 
+  let tempGraphicsSettings = { ...graphicsSettings };
+
   function toggleConfig() {
     showConfigModal = !showConfigModal;
-    // Pause game when opening config if not already paused?
-    // Optionally: if (showConfigModal && !isPaused) togglePause();
+    if (showConfigModal) {
+      // Create a fresh copy when opening
+      tempGraphicsSettings = { ...graphicsSettings };
+    }
+  }
+
+  function saveGraphicsSettings() {
+    isLoading = true; // Show full screen spinner
+    // Simulate delay for "Applying Settings..."
+    setTimeout(() => {
+      graphicsSettings = { ...tempGraphicsSettings };
+      applyGraphicsSettings();
+      isLoading = false;
+      showConfigModal = false;
+    }, 1000);
   }
 
   function applyGraphicsSettings() {
@@ -412,7 +427,7 @@
 
   // Position Capture HUD
   let playerPosition = { x: 0, y: 0, z: 0 };
-  let showHud = true;
+  let showHud = false; // Hidden by default
   let isFirstPerson = false;
   let cameraRotation = { x: 0, y: 0 };
 
@@ -680,6 +695,13 @@
     });
 
     if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("developer") === "gustavodslara") {
+        console.log("Developer Mode Enabled");
+        showHud = true;
+        showAudioMixer = true;
+      }
+
       window.addEventListener("resize", onWindowResize);
       window.addEventListener("keydown", onKeyDown);
       window.addEventListener("keyup", onKeyUp);
@@ -4818,7 +4840,7 @@
 
   <!-- Audio Control with Volume Slider -->
   <div
-    class="fixed bottom-4 right-4 z-50 flex items-center gap-3"
+    class="fixed bottom-4 right-4 z-[100] flex items-center gap-3"
     role="group"
     aria-label="Audio controls"
     on:mouseenter={() => (showVolumeSlider = true)}
@@ -4838,7 +4860,6 @@
           on:input={updateVolume}
           aria-label="Master Volume"
           style="--value: {volMaster * 100}%"
-          dir="rtl"
           class="volume-slider w-24 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
         />
       </div>
@@ -4860,7 +4881,7 @@
 
   <!-- Pause Button -->
   <button
-    class="fixed top-24 right-4 z-50 p-3 rounded-full glass-panel text-white hover:bg-white/20 transition-all active:scale-95"
+    class="fixed top-24 right-4 z-[100] p-3 rounded-full glass-panel text-white hover:bg-white/20 transition-all active:scale-95"
     on:click={togglePause}
     aria-label={isPaused ? "Resume Game" : "Pause Game"}
   >
@@ -4873,7 +4894,7 @@
 
   <!-- Config Button (Below Pause Button) -->
   <button
-    class="fixed top-40 right-4 z-50 p-3 rounded-full glass-panel text-white hover:bg-white/20 transition-all active:scale-95"
+    class="fixed top-40 right-4 z-[100] p-3 rounded-full glass-panel text-white hover:bg-white/20 transition-all active:scale-95"
     on:click={toggleConfig}
     aria-label="Graphics Settings"
   >
@@ -4911,7 +4932,7 @@
                 Resolution Scale (FSR)
               </label>
               <span class="text-sm font-mono text-blue-300"
-                >{Math.round(graphicsSettings.resolution * 100)}%</span
+                >{Math.round(tempGraphicsSettings.resolution * 100)}%</span
               >
             </div>
             <input
@@ -4919,10 +4940,9 @@
               min="0.5"
               max="1.0"
               step="0.05"
-              bind:value={graphicsSettings.resolution}
-              on:change={applyGraphicsSettings}
+              bind:value={tempGraphicsSettings.resolution}
               class="w-full volume-slider h-3 rounded-lg appearance-none cursor-pointer"
-              style="--value: {(graphicsSettings.resolution - 0.5) * 200}%"
+              style="--value: {(tempGraphicsSettings.resolution - 0.5) * 200}%"
             />
             <p class="text-xs text-white/50">
               Lower resolution improves performance significantly.
@@ -4939,12 +4959,11 @@
               {#each ["off", "low", "high", "crisp", "ultra", "epic", "nightmare"] as mode}
                 <button
                   class="px-1 py-2 rounded-lg border text-[8px] font-bold transition-all uppercase tracking-tighter
-                  {graphicsSettings.shadows === mode
+                  {tempGraphicsSettings.shadows === mode
                     ? 'bg-blue-600/50 border-blue-400 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
                     : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}"
                   on:click={() => {
-                    graphicsSettings.shadows = mode;
-                    applyGraphicsSettings();
+                    tempGraphicsSettings.shadows = mode;
                   }}
                 >
                   {mode.toUpperCase()}
@@ -4956,10 +4975,16 @@
 
         <div class="mt-8 pt-4 border-t border-white/10 flex justify-end">
           <button
-            class="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-105"
+            class="px-4 py-2 text-white/70 hover:text-white font-medium transition-colors mr-2"
             on:click={() => (showConfigModal = false)}
           >
-            Done
+            Cancel
+          </button>
+          <button
+            class="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-105"
+            on:click={saveGraphicsSettings}
+          >
+            Save Changes
           </button>
         </div>
       </div>
@@ -6483,7 +6508,7 @@
   /* Volume Slider Styling */
   .volume-slider {
     background: linear-gradient(
-      to left,
+      to right,
       #3b82f6 0%,
       #3b82f6 var(--value, 30%),
       #d1d5db var(--value, 30%),

@@ -1,1 +1,0 @@
-import{f as e,a as r}from"./WHDxFlgR.js";import"./CPLBgFXa.js";var s=e('<div class="spinner-container svelte-8x1o5o"><div class="spinner svelte-8x1o5o"></div> <p class="loading-text svelte-8x1o5o">Carregando...</p></div>');function t(o){var a=s();r(o,a)}export{t as S};

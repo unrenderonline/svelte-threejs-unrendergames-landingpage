@@ -1,10 +1,12 @@
 <script>
-  // Simple loading spinner component
+  export let showText = true;
 </script>
 
 <div class="spinner-container">
   <div class="spinner"></div>
-  <p class="loading-text">Carregando...</p>
+  {#if showText}
+    <p class="loading-text">Carregando...</p>
+  {/if}
 </div>
 
 <style>
@@ -40,7 +42,11 @@
   }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 </style>
