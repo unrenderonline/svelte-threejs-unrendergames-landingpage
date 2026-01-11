@@ -32,14 +32,15 @@
 
   // Game Constants
   const FIREBALL_COOLDOWN = 1; // 1 second
-  const THUNDER_COOLDOWN = 60.0; // 60 seconds
-  const ZOMBIE_RESPAWN_TIME = 60.0; // 60 seconds (Tripled)
+  const THUNDER_COOLDOWN = 30.0; // 30 seconds
+  const ZOMBIE_RESPAWN_TIME = 15.0; // 15 seconds (Subsequent spawns)
+  const INITIAL_ZOMBIE_SPAWN_TIME = 30.0; // 30 seconds (First spawn)
 
   let zombieIdleAction; // Idle animation
 
   let zombieWalkAction; // Walk animation
   let isZombieRising = false; // Track if zombie is currently rising
-  let zombieRespawnTimer = ZOMBIE_RESPAWN_TIME; // Start with countdown
+  let zombieRespawnTimer = INITIAL_ZOMBIE_SPAWN_TIME; // Start with longer countdown
   let isZombieChasing = false; // Track chasing state
   let zombieCollider = new Capsule(
     new THREE.Vector3(0, 0, 0),
@@ -215,6 +216,16 @@
   let playerJoke = ""; // Store player's joke input
   let showCloseButton = false; // For clown's close button after response
 
+  // Interaction Hint State
+  let interactionHint = {
+    visible: false,
+    x: 0,
+    y: 0,
+    text: "",
+    isMobile: false,
+  };
+  let activeInteractiveObject = null;
+
   // Selfie State
   let isTakingSelfie = false;
   let showFlash = false;
@@ -271,12 +282,19 @@
 
   // Graphics Settings
   let graphicsSettings = {
-    shadows: "high", // 'off', 'low', 'high'
-    resolution: 1.0, // 0.5 to 1.0 (Pixel Ratio)
+    shadows: "médio", // 'off', 'low', 'high' -> now matches UI keys
+    resolution: 0.65, // 0.5 to 1.0 (Pixel Ratio)
     antialiasing: true, // MSAA
   };
 
   let tempGraphicsSettings = { ...graphicsSettings };
+
+  // Joystick State
+  let isMobile = false;
+  let joystickActive = false;
+  let joystickData = { x: 0, y: 0, originX: 0, originY: 0 };
+  let joystickBase;
+  let joystickStick;
 
   function toggleConfig() {
     showConfigModal = !showConfigModal;
@@ -308,24 +326,25 @@
     renderer.setPixelRatio(targetRatio);
 
     // 2. Shadows
+    // 2. Shadows
     switch (graphicsSettings.shadows) {
       case "off":
         renderer.shadowMap.enabled = false;
         break;
-      case "low":
+      case "baixo": // Low
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.BasicShadowMap;
         break;
-      case "high":
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        break;
-      case "crisp":
+      case "médio": // Medium (was 'high' logic)
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
-        updateShadowCamera(200, 4096);
         break;
-      case "ultra":
+      case "alto": // High (was 'crisp' logic)
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft seems better for high
+        // updateShadowCamera(200, 4096);
+        break;
+      case "ultra": // Kept for potential compatibility or if added back
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         updateShadowCamera(150, 4096); // Tighter bounds = Higher Res
@@ -335,10 +354,15 @@
         renderer.shadowMap.type = THREE.PCFShadowMap;
         updateShadowCamera(150, 8192); // 8K Texture
         break;
-      case "nightmare":
+      case "∞": // Nightmare
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         updateShadowCamera(100, 8192); // 8K + Tight Bounds = Extreme Density
+        break;
+      // Fallback for internal default state potentially being "high" from old code
+      case "high":
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         break;
     }
 
@@ -589,7 +613,15 @@
     init();
     animate();
 
-    window.addEventListener("resize", onWindowResize);
+    if (typeof window !== "undefined") {
+      isMobile = window.innerWidth < 768;
+      window.addEventListener("resize", () => {
+        isMobile = window.innerWidth < 768;
+        onWindowResize();
+      });
+    } else {
+      window.addEventListener("resize", onWindowResize);
+    }
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", onWindowResize);
     window.addEventListener("keydown", onKeyDown);
@@ -804,7 +836,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
 
     // Lights (Optimized for Sunny Look)
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x606060, 2.0);
@@ -814,15 +846,14 @@
     dirLight = new THREE.DirectionalLight(0xfffbdd, 3.5);
     dirLight.position.set(50, 100, 50);
     dirLight.castShadow = true;
-    dirLight.shadow.bias = -0.001;
-    dirLight.shadow.normalBias = 0.05;
+    dirLight.shadow.bias = -0.0001;
+    dirLight.shadow.normalBias = 0.0;
     dirLight.shadow.mapSize.width = 4096;
     dirLight.shadow.mapSize.height = 4096;
-    dirLight.shadow.camera.top = 300;
-    dirLight.shadow.camera.bottom = -300;
-    dirLight.shadow.camera.left = -300;
-    dirLight.shadow.camera.right = 300;
-    dirLight.shadow.camera.right = 300;
+    dirLight.shadow.camera.top = 40;
+    dirLight.shadow.camera.bottom = -40;
+    dirLight.shadow.camera.left = -40;
+    dirLight.shadow.camera.right = 40;
     scene.add(dirLight);
 
     // [OPTIMIZATION] Persistent Warmup Light
@@ -839,10 +870,14 @@
     const manager = new THREE.LoadingManager();
     manager.onLoad = function () {
       console.log("Loading complete!");
-      isLoading = false;
 
-      // Pre-compile VFX shaders to prevent stutter
+      // Pre-compile VFX shaders to prevent stutter BEFORE hiding spinner
       warmupShaders();
+
+      // Attempt audio warmup (might be blocked by browser policy, but good to try)
+      warmupAudio();
+
+      isLoading = false;
 
       // Fix initial floating/falling: Ensure player is on ground if possible
       // Or just let physics handle it naturally now that collision is ready.
@@ -1261,6 +1296,8 @@
           child.material.color.setHex(Math.random() * 0xffffff);
           child.castShadow = true;
           child.receiveShadow = true;
+          // Fix disappearing at edges
+          child.frustumCulled = false;
         }
       });
 
@@ -1318,6 +1355,8 @@
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          // Fix disappearing at edges
+          child.frustumCulled = false;
         }
       });
 
@@ -1368,6 +1407,8 @@
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          // Fix disappearing at edges
+          child.frustumCulled = false;
         }
       });
 
@@ -1444,6 +1485,8 @@
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          // Fix disappearing at edges
+          child.frustumCulled = false;
         }
       });
 
@@ -1502,6 +1545,8 @@
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          // Fix disappearing at edges
+          child.frustumCulled = false;
         }
       });
 
@@ -1993,7 +2038,7 @@
     }
 
     // Reset Zombie to Countdown Mode
-    zombieRespawnTimer = ZOMBIE_RESPAWN_TIME;
+    zombieRespawnTimer = INITIAL_ZOMBIE_SPAWN_TIME;
     if (zombie) {
       zombie.visible = false;
       zombie.userData.isDead = true;
@@ -2361,6 +2406,71 @@
     }
   }
 
+  function updateInteractionHint() {
+    if (showModal || showDialogue || !model || !camera) {
+      interactionHint.visible = false;
+      return;
+    }
+
+    const playerPos = model.position.clone();
+    let closestDist = Infinity;
+    let closestObj = null;
+    let hintText = "";
+
+    // Candidate objects
+    const candidates = [
+      { obj: sphere, name: "Miku", radius: 1.3 }, // Reduced from 2.0 to match trigger (1.2)
+      { obj: clown, name: "Clown", radius: 1.3 },
+      { obj: welcomeSign, name: "Welcome", radius: 1.3 },
+      ...cubes.map((c) => ({ obj: c, name: "Cartouche", radius: 1.0 })), // Reduced from 1.5 to match trigger (0.8)
+    ];
+
+    for (const item of candidates) {
+      if (!item.obj) continue;
+
+      // Simple distance check to object position
+      // For cartouches, they are small, so center distance is fine.
+      // For characters, they are also roughly 1 unit wide.
+      const dist = new THREE.Vector2(
+        item.obj.position.x,
+        item.obj.position.z,
+      ).distanceTo(new THREE.Vector2(playerPos.x, playerPos.z));
+
+      if (dist < item.radius && dist < closestDist) {
+        closestDist = dist;
+        closestObj = item;
+      }
+    }
+
+    if (closestObj) {
+      activeInteractiveObject = closestObj.obj;
+
+      // Calculate screen position
+      // We want the hint slightly above the object
+      const hintPos = closestObj.obj.position.clone();
+      hintPos.y += 2.0; // Adjust height based on object type if needed
+
+      // Project to 2D
+      hintPos.project(camera);
+
+      const x = (hintPos.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-(hintPos.y * 0.5) + 0.5) * window.innerHeight;
+
+      interactionHint.visible = true;
+      interactionHint.x = x;
+      interactionHint.y = y;
+
+      const keyText = isMobile ? "" : "Espaço";
+      interactionHint.text = isMobile
+        ? "Interagir"
+        : `Pressione Espaço para Interagir`;
+      interactionHint.isMobile = isMobile;
+    } else {
+      interactionHint.visible = false;
+      activeInteractiveObject = null;
+    }
+  }
+
   // Modal Functions
   function closeModal() {
     showModal = false;
@@ -2420,7 +2530,13 @@
         keys.d = true;
         break;
       case " ":
-        keys.space = true;
+        if (activeInteractiveObject && !isMoving) {
+          // If near an object, Space interacts
+          checkInteraction();
+        } else {
+          // Otherwise, Jump
+          keys.space = true;
+        }
         break;
       case "shift":
         keys.shift = true;
@@ -2727,6 +2843,47 @@
     }
   }
 
+  function handleJoystickStart(e) {
+    if (!isMobile) return;
+    const touch = e.changedTouches[0];
+    joystickActive = true;
+    joystickData.originX = touch.clientX;
+    joystickData.originY = touch.clientY;
+    joystickData.x = 0;
+    joystickData.y = 0;
+  }
+
+  function handleJoystickMove(e) {
+    if (!joystickActive) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - joystickData.originX;
+    const dy = touch.clientY - joystickData.originY;
+    const maxDist = 50; // Max radius
+    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxDist);
+    const angle = Math.atan2(dy, dx);
+
+    const stickX = Math.cos(angle) * dist;
+    const stickY = Math.sin(angle) * dist;
+
+    // Normalize input -1 to 1
+    joystickData.x = stickX / maxDist;
+    joystickData.y = stickY / maxDist;
+
+    // Update UI
+    if (joystickStick) {
+      joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+    }
+  }
+
+  function handleJoystickEnd(e) {
+    joystickActive = false;
+    joystickData.x = 0;
+    joystickData.y = 0;
+    if (joystickStick) {
+      joystickStick.style.transform = `translate(0px, 0px)`;
+    }
+  }
+
   function updatePlayer(delta) {
     if (isLoading || isInDialogue || showModal || !model) return;
 
@@ -2734,7 +2891,16 @@
     const inputVector = new THREE.Vector3();
 
     // WASD Input
-    if (keys.w || keys.s || keys.a || keys.d) {
+    // WASD Input OR Joystick
+    const moveActive =
+      keys.w ||
+      keys.s ||
+      keys.a ||
+      keys.d ||
+      joystickData.x !== 0 ||
+      joystickData.y !== 0;
+
+    if (moveActive) {
       // Cancel Click-Move
       if (targetPosition || isMoving) {
         targetPosition = null;
@@ -2743,10 +2909,22 @@
         hideDestinationMarker();
       }
 
-      if (keys.w) inputVector.z -= 1;
-      if (keys.s) inputVector.z += 1;
-      if (keys.a) inputVector.x -= 1;
-      if (keys.d) inputVector.x += 1;
+      let dx = 0;
+      let dz = 0;
+
+      if (keys.w) dz -= 1;
+      if (keys.s) dz += 1;
+      if (keys.a) dx -= 1;
+      if (keys.d) dx += 1;
+
+      // Add Joystick Input (Scale if needed)
+      dx += joystickData.x;
+      dz += joystickData.y;
+
+      inputVector.set(dx, 0, dz);
+
+      // Clamp to length 1
+      if (inputVector.lengthSq() > 1) inputVector.normalize();
     }
     // Click-Move Input
     else if (targetPosition && isMoving) {
@@ -3015,7 +3193,7 @@
       // User requested "much closer and low"
       // Previous: distance 4.0, y + 2.2
       // New: distance 1.8, y + 1.2
-      const cameraDistance = isMobile ? 3.0 : 1.8;
+      const cameraDistance = isMobile ? 2.0 : 1.8;
       const selfieCamPos = sphere.position
         .clone()
         .add(pToM.multiplyScalar(cameraDistance))
@@ -3119,7 +3297,7 @@
     if (npc === "miku") {
       fullText = "Eai mano, tô tirando uma selfie, quer entrar tambem?";
     } else if (npc === "clown") {
-      fullText = "Hi, im doing nothing, would you mind telling me a joke?";
+      fullText = "Eu num... hihi... tô fazendo nada, mim conta uma piada?";
       // Play waving animation
       if (clownActions["waving"]) {
         if (clownActions["happy"]) clownActions["happy"].fadeOut(0.2);
@@ -3363,9 +3541,7 @@
   }
 
   function handleNo() {
-    byebyeSound.currentTime = 0;
-    byebyeSound.volume = volume;
-    byebyeSound.play().catch(() => {});
+    playByeByeSound(); // Use safe helper
 
     if (currentNPC === "miku") {
       endDialogue();
@@ -3413,12 +3589,18 @@
     setTimeout(() => {
       // 4. Flash effect
       showFlash = true;
-      shutterSound1.currentTime = 0;
-      shutterSound2.currentTime = 0;
-      shutterSound1.volume = volume;
-      shutterSound2.volume = volume;
-      shutterSound1.play().catch(() => {});
-      shutterSound2.play().catch(() => {});
+
+      // Safe sound playback
+      if (shutterSound1) {
+        shutterSound1.currentTime = 0;
+        shutterSound1.volume = volShutter * volMaster;
+        shutterSound1.play().catch(() => {});
+      }
+      if (shutterSound2) {
+        shutterSound2.currentTime = 0;
+        shutterSound2.volume = volShutter * volMaster;
+        shutterSound2.play().catch(() => {});
+      }
 
       // 5. Take screenshot after a slight delay to ensure flash is visible or just before?
       // Actually, we want the screenshot of the scene, NOT the flash overlay.
@@ -3458,7 +3640,7 @@
     showCloseButton = false;
 
     // If closing clown dialogue, return clown to happy animation
-    if (currentNPC === "clown" && clownActions["happy"]) {
+    if (currentNPC === "clown" && clownActions && clownActions["happy"]) {
       if (clownActions["laughing"]) clownActions["laughing"].fadeOut(0.3);
       if (clownActions["idle"]) clownActions["idle"].fadeOut(0.3);
       clownActions["happy"].reset().fadeIn(0.5).play();
@@ -4117,6 +4299,8 @@
     // EXCEPT if it interpolates.
     // Let's keep camera active so user can look around if we implemented look controls.
     // Our updateCamera is mostly follow-cam. If model doesn't move, cam settles.
+
+    updateInteractionHint();
 
     if (renderer && scene && camera) {
       renderer.render(scene, camera);
@@ -4818,6 +5002,20 @@
 
     return material;
   }
+
+  function portal(node) {
+    let target = document.body;
+    async function update() {
+      target.appendChild(node);
+      node.hidden = false;
+    }
+    update();
+    return {
+      destroy() {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      },
+    };
+  }
 </script>
 
 <main class="fullscreen">
@@ -4838,11 +5036,40 @@
     <div class="flash-overlay"></div>
   {/if}
 
+  {#if isMobile}
+    <!-- Virtual Joystick (Left) -->
+    <div
+      class="fixed bottom-12 left-12 z-[100] w-32 h-32 bg-white/10 backdrop-blur-md rounded-full border border-white/20 touch-none flex items-center justify-center"
+      bind:this={joystickBase}
+      on:touchstart|preventDefault={handleJoystickStart}
+      on:touchmove|preventDefault={handleJoystickMove}
+      on:touchend|preventDefault={handleJoystickEnd}
+    >
+      <div
+        class="w-12 h-12 bg-white/50 rounded-full shadow-lg pointer-events-none transition-transform duration-75"
+        bind:this={joystickStick}
+      ></div>
+    </div>
+
+    <!-- Jump Button (Right) -->
+    <div
+      class="fixed bottom-24 right-8 z-[100] w-20 h-20 bg-white/10 backdrop-blur-md rounded-full border border-white/20 touch-none flex items-center justify-center active:bg-white/30 transition-colors"
+      on:touchstart|preventDefault={() => {
+        keys.space = true;
+      }}
+      on:touchend|preventDefault={() => {
+        keys.space = false;
+      }}
+    >
+      <i class="fas fa-arrow-up text-white text-2xl"></i>
+    </div>
+  {/if}
+
   <!-- Audio Control with Volume Slider -->
   <div
     class="fixed bottom-4 right-4 z-[100] flex items-center gap-3"
     role="group"
-    aria-label="Audio controls"
+    aria-label="Audio"
     on:mouseenter={() => (showVolumeSlider = true)}
     on:mouseleave={() => (showVolumeSlider = false)}
   >
@@ -4858,7 +5085,7 @@
           step="0.01"
           bind:value={volMaster}
           on:input={updateVolume}
-          aria-label="Master Volume"
+          aria-label="Volume"
           style="--value: {volMaster * 100}%"
           class="volume-slider w-24 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
         />
@@ -4869,7 +5096,7 @@
     <button
       class="backdrop-blur-md bg-gradient-to-b from-white/30 to-white/10 border border-white/40 hover:bg-white/20 text-white font-bold p-3 rounded-full shadow-lg transition-all duration-200"
       on:click={toggleMusic}
-      aria-label={isMusicPlaying ? "Mute audio" : "Unmute audio"}
+      aria-label={isMusicPlaying ? "Silenciar" : "Dessilenciar"}
     >
       <i
         class="fas {isMusicPlaying
@@ -4913,7 +5140,7 @@
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold text-white flex items-center gap-3">
             <i class="fas fa-desktop text-blue-400"></i>
-            Graphics Settings
+            Gráficos
           </h2>
           <button
             class="text-white/60 hover:text-white transition-colors"
@@ -4929,7 +5156,7 @@
             <div class="flex justify-between items-center text-white">
               <label class="font-medium flex items-center gap-2">
                 <i class="fas fa-bolt text-yellow-400"></i>
-                Resolution Scale (FSR)
+                Escala de Resolução (FSR)
               </label>
               <span class="text-sm font-mono text-blue-300"
                 >{Math.round(tempGraphicsSettings.resolution * 100)}%</span
@@ -4945,18 +5172,18 @@
               style="--value: {(tempGraphicsSettings.resolution - 0.5) * 200}%"
             />
             <p class="text-xs text-white/50">
-              Lower resolution improves performance significantly.
+              Reduzir a resolução melhora significativamente a performance.
             </p>
           </div>
 
           <!-- Shadow Quality -->
           <div class="space-y-3">
             <label class="font-medium text-white flex items-center gap-2">
-              <i class="fas fa-ghost text-purple-400"></i>
-              Shadow Quality
+              <i class="fas fa-sun text-yellow-400"></i>
+              Sombra
             </label>
             <div class="grid grid-cols-7 gap-2">
-              {#each ["off", "low", "high", "crisp", "ultra", "epic", "nightmare"] as mode}
+              {#each ["off", "baixo", "médio", "alto", "ultra", "epic", "∞"] as mode}
                 <button
                   class="px-1 py-2 rounded-lg border text-[8px] font-bold transition-all uppercase tracking-tighter
                   {tempGraphicsSettings.shadows === mode
@@ -4978,13 +5205,13 @@
             class="px-4 py-2 text-white/70 hover:text-white font-medium transition-colors mr-2"
             on:click={() => (showConfigModal = false)}
           >
-            Cancel
+            Cancelar
           </button>
           <button
             class="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-105"
             on:click={saveGraphicsSettings}
           >
-            Save Changes
+            Salvar
           </button>
         </div>
       </div>
@@ -5001,14 +5228,19 @@
         <h2
           class="text-4xl font-black text-white tracking-[0.2em] drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"
         >
-          PAUSED
+          PAUSADO
         </h2>
       </div>
     </div>
   {/if}
 
   <!-- Power Cooldown Indicators -->
-  <div class="fixed bottom-20 left-4 z-50 flex flex-col gap-3">
+  <!-- Power Cooldown Indicators -->
+  <div
+    class="fixed left-4 z-50 flex flex-col gap-3 transition-all duration-300 {isMobile
+      ? 'bottom-80'
+      : 'bottom-4'}"
+  >
     <!-- Fireball Power (1) -->
     <button
       class="relative w-16 h-16 rounded-2xl backdrop-blur-md bg-gradient-to-b from-white/30 to-white/10 border border-white/40 shadow-lg flex items-center justify-center transition-transform hover:scale-105"
@@ -5079,7 +5311,7 @@
     </div>
     <div class="flex flex-col">
       <span class="text-xs text-white/70 font-bold uppercase tracking-wider"
-        >Health</span
+        >Vida</span
       >
       <span class="text-xl text-white font-black leading-none"
         >{playerHp} / {playerMaxHp}</span
@@ -5090,7 +5322,9 @@
   <!-- Zombie Respawn HUD -->
   {#if zombieRespawnTimer > 0}
     <div
-      class="fixed top-24 left-40 z-50 flex items-center gap-3 glass-panel p-3 rounded-2xl animate-pulse"
+      class="fixed z-50 flex items-center gap-3 glass-panel p-3 rounded-2xl animate-pulse transition-all duration-300 {isMobile
+        ? 'top-44 left-4'
+        : 'top-24 left-40'}"
       style="border-color: rgba(255, 68, 68, 0.5);"
     >
       <div class="relative w-10 h-10 flex items-center justify-center">
@@ -5100,7 +5334,7 @@
       </div>
       <div class="flex flex-col">
         <span class="text-xs text-white/70 font-bold uppercase tracking-wider"
-          >Respawn In</span
+          >Inimigo em</span
         >
         <span class="text-xl text-white font-black leading-none"
           >{Math.ceil(zombieRespawnTimer)}s</span
@@ -5121,13 +5355,15 @@
         >
           GAME OVER
         </h2>
-        <p class="text-white/70">The zombie got you!</p>
+        <p class="text-white/70">
+          Você não se preparou para consequências imprevistas!
+        </p>
 
         <button
           class="px-8 py-3 bg-gradient-to-r from-red-600 to-red-500 rounded-xl text-white font-bold text-lg shadow-lg hover:scale-105 active:scale-95 transition-all w-full"
           on:click={resetGame}
         >
-          TRY AGAIN
+          TENTAR DE NOVO
         </button>
       </div>
     </div>
@@ -5135,6 +5371,7 @@
 
   {#if showModal && currentProject}
     <div
+      use:portal
       class="modal-backdrop"
       on:click={closeModal}
       on:keydown={(e) => e.key === "Escape" && closeModal()}
@@ -5290,6 +5527,7 @@
   <!-- Help Modal -->
   {#if showHelpModal}
     <div
+      use:portal
       class="modal-backdrop"
       on:click={closeHelpModal}
       on:keydown={(e) => e.key === "Escape" && closeHelpModal()}
@@ -5377,7 +5615,7 @@
       <div class="dialogue-box">
         <div class="dialogue-text">
           <p class="speaker-name">
-            {currentNPC === "miku" ? "Miku Brasileira" : "Clown"}
+            {currentNPC === "miku" ? "Miku Brasileira" : "Paiaço"}
           </p>
           <p class="dialogue-content">
             {displayedText}
@@ -5387,14 +5625,14 @@
           <div class="dialogue-buttons">
             {#if currentNPC === "miku"}
               <button class="dialogue-btn yes-btn" on:click={handleYes}>
-                <span>✓</span> Claro
+                <i class="fas fa-check"></i> Claro
               </button>
               <button class="dialogue-btn no-btn" on:click={handleNo}>
-                <span>✗</span> Negativo
+                <i class="fas fa-times"></i> Negativo
               </button>
             {:else if currentNPC === "clown"}
               <button class="dialogue-btn close-btn" on:click={endDialogue}>
-                <span>✓</span> Fechar
+                <i class="fas fa-check"></i> Fechar
               </button>
             {/if}
           </div>
@@ -5404,15 +5642,15 @@
             <input
               type="text"
               class="joke-input"
-              placeholder="Type your joke here..."
+              placeholder="Conte sua piada..."
               bind:value={playerJoke}
               on:keydown={handleJokeKeydown}
             />
             <button class="send-btn" on:click={handleJokeSubmit}>
-              <span>➤</span> Contar
+              <i class="fas fa-paper-plane"></i> Contar
             </button>
             <button class="dialogue-btn no-btn" on:click={handleNo}>
-              <span>✗</span> Não
+              <i class="fas fa-times"></i> Não
             </button>
           </div>
         {/if}
@@ -5424,7 +5662,7 @@
   {#if showHud}
     <div class="position-hud">
       <div class="hud-header">
-        <h3>📍 Position Capture</h3>
+        <h3>📍 Captura de Posição</h3>
         <button class="hud-toggle" on:click={() => (showHud = false)}>✕</button>
       </div>
       <div class="hud-coords">
@@ -5442,7 +5680,7 @@
         </div>
       </div>
       <button class="hud-copy-btn" on:click={copyPosition}>
-        📋 Copy Code
+        📋 Copiar Código
       </button>
     </div>
   {/if}
@@ -5464,7 +5702,7 @@
         <!-- Music -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Music</span>
+            <span class="label">Música</span>
             <span class="value">{Math.round(volBgMusic * 100)}%</span>
           </div>
           <input
@@ -5481,7 +5719,7 @@
         <!-- Type (Miku) -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Voice (Type)</span>
+            <span class="label">Miku</span>
             <span class="value">{Math.round(volType * 100)}%</span>
           </div>
           <input
@@ -5498,7 +5736,7 @@
         <!-- Steps -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Steps</span>
+            <span class="label">Passos</span>
             <span class="value">{Math.round(volStep * 100)}%</span>
           </div>
           <input
@@ -5515,7 +5753,7 @@
         <!-- Jump -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Jump</span>
+            <span class="label">Pular</span>
             <span class="value">{Math.round(volJump * 100)}%</span>
           </div>
           <input
@@ -5532,7 +5770,7 @@
         <!-- OK (Interaction) -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Interact (OK)</span>
+            <span class="label">OK</span>
             <span class="value">{Math.round(volOk * 100)}%</span>
           </div>
           <input
@@ -5549,7 +5787,7 @@
         <!-- Bye -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Bye</span>
+            <span class="label">Tchau</span>
             <span class="value">{Math.round(volBye * 100)}%</span>
           </div>
           <input
@@ -5566,7 +5804,7 @@
         <!-- Shutter -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Camera</span>
+            <span class="label">Câmera</span>
             <span class="value">{Math.round(volShutter * 100)}%</span>
           </div>
           <input
@@ -5583,7 +5821,7 @@
         <!-- Zombie -->
         <div class="coord" style="flex-direction: column; gap: 0.2rem;">
           <div style="display: flex; justify-content: space-between;">
-            <span class="label">Zombie</span>
+            <span class="label">Zumbi</span>
             <span class="value">{Math.round(volZombie * 100)}%</span>
           </div>
           <input
@@ -5602,9 +5840,49 @@
         class="hud-copy-btn hud-copy-audio-btn"
         on:click={copyAudioDefaults}
       >
-        📋 Copy Defaults
+        📋 Copiar Padrões
       </button>
     </div>
+  {/if}
+
+  <!-- Interaction Hint Overlay -->
+  {#if interactionHint.visible}
+    <div
+      class="fixed pointer-events-none z-[80] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2"
+      style="left: {interactionHint.x}px; top: {interactionHint.y}px;"
+    >
+      {#if interactionHint.isMobile}
+        <!-- Icon for Mobile -->
+        <div
+          class="bg-white/20 backdrop-blur-md border border-white/40 p-3 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-bounce"
+        >
+          <i class="fas fa-hand-point-down text-white text-2xl"></i>
+        </div>
+        <span
+          class="text-white font-bold text-sm bg-black/50 px-2 py-1 rounded backdrop-blur-sm"
+        >
+          {interactionHint.text}
+        </span>
+      {:else}
+        <!-- Desktop Hint -->
+        <div
+          class="bg-black/60 text-white px-4 py-2 rounded-full backdrop-blur-md border border-white/20 font-bold text-sm shadow-lg animate-pulse"
+        >
+          {interactionHint.text}
+        </div>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Mobile Interaction Button (Fixed Position) -->
+  {#if isMobile && interactionHint.visible}
+    <button
+      class="fixed bottom-24 right-4 z-[90] w-20 h-20 bg-white/20 backdrop-blur-md border-2 border-white/40 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] active:bg-white/40 active:scale-95 transition-all"
+      on:click={checkInteraction}
+      aria-label="Interagir"
+    >
+      <i class="fas fa-hand-pointer text-white text-4xl drop-shadow-lg"></i>
+    </button>
   {/if}
 </main>
 
@@ -5634,17 +5912,6 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
-  .ui-overlay {
-    position: absolute;
-    bottom: 2rem;
-    left: 0;
-    width: 100%;
-    pointer-events: none;
-    display: flex;
-    justify-content: center;
-    z-index: 10;
-  }
-
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -5652,7 +5919,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 50;
+    z-index: 9999;
     backdrop-filter: blur(4px);
     animation: fadeIn 0.2s ease-out;
   }

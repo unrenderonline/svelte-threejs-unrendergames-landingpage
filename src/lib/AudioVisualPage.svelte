@@ -21,6 +21,15 @@
     let cameraStream = null;
     let cameraPermissionGranted = false;
     let showMocap = false;
+    let scrollY = 0;
+
+    const handleScrollClick = () => {
+        if (scrollY > 100) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+            window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
+        }
+    };
 
     // Camera permission request
     async function requestCameraPermission() {
@@ -191,7 +200,6 @@
             mocapDiv.style.flexDirection = "column";
             mocapDiv.style.alignItems = "center";
             mocapDiv.style.justifyContent = "center";
-            mocapDiv.style.padding = "2rem";
             mocapDiv.style.boxSizing = "border-box";
             mocapDiv.style.opacity = "0"; // Start hidden to prevent perspective leak
 
@@ -249,19 +257,29 @@
             const textData = [
                 {
                     title: "Fullbody Tracking",
-                    desc: "Captura de movimento corporal",
+                    desc: "Captura de movimento corporal para animações",
                 },
                 {
                     title: "Metahuman Animator",
                     desc: "Captura de movimento e personagens realistas",
                 },
-                { title: "Avatar Digital", desc: "Animações em tempo real" },
+                {
+                    title: "Animação Digital",
+                    desc: "Do conceito à renderização final",
+                },
             ];
+
+            const isMobile = window.innerWidth < 768;
+            const textGroupWidth = isMobile ? "140px" : "300px";
+            const titleSize = isMobile ? "1.2rem" : "2.5rem";
+            const descSize = isMobile ? "0.8rem" : "1.2rem";
+            const orbitRadius = isMobile ? 40 : 60;
+            const gifSize = isMobile ? "80px" : "150px";
 
             const createTextGroup = (data) => {
                 const container = document.createElement("div");
                 container.style.position = "absolute";
-                container.style.width = "300px"; // Fixed width for text wrapping
+                container.style.width = textGroupWidth; // Responsive width
                 container.style.textAlign = "center";
                 container.style.pointerEvents = "none";
                 container.style.zIndex = "40"; // HIGHEST: Text on top of Mocap
@@ -270,7 +288,7 @@
                 t.innerText = data.title;
                 t.style.fontFamily =
                     '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif';
-                t.style.fontSize = "2.5rem"; // Slightly smaller to fit multiple
+                t.style.fontSize = titleSize;
                 t.style.fontWeight = "800";
                 t.style.color = "#ffffff";
                 t.style.letterSpacing = "-0.02em";
@@ -280,7 +298,7 @@
                 d.innerText = data.desc;
                 d.style.fontFamily =
                     '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif';
-                d.style.fontSize = "1.2rem";
+                d.style.fontSize = descSize;
                 d.style.fontWeight = "400";
                 d.style.color = "rgba(255,255,255,0.8)";
                 d.style.marginTop = "0.5rem";
@@ -291,12 +309,23 @@
             };
 
             // Cluster Centers
+            // Adaptive positioning
+            const xSpread = isMobile ? window.innerWidth * 0.35 : 450;
+            const yOffsetTop = isMobile ? 220 : 280;
+            const yOffsetBottom = isMobile ? 180 : 150;
+
             // Top Center (Moved down for navbar)
-            const topCluster = { x: centerX, y: centerY - 280 };
+            const topCluster = { x: centerX, y: centerY - yOffsetTop };
             // Left Cluster
-            const leftCluster = { x: centerX - 450, y: centerY + 150 };
+            const leftCluster = {
+                x: centerX - xSpread,
+                y: centerY + yOffsetBottom,
+            };
             // Right Cluster
-            const rightCluster = { x: centerX + 450, y: centerY + 150 };
+            const rightCluster = {
+                x: centerX + xSpread,
+                y: centerY + yOffsetBottom,
+            };
 
             const clusters = [topCluster, leftCluster, rightCluster];
 
@@ -306,7 +335,7 @@
                 layoutContainer.appendChild(el);
 
                 const center = clusters[i] || topCluster;
-                const radius = 60;
+                const radius = orbitRadius;
                 const duration = 15 + Math.random() * 5;
 
                 // Start Text at Angle 0 (Right of center), GIF will be at PI (Left)
@@ -314,9 +343,14 @@
             });
 
             // --- MOCAP CONTAINER (CENTER) ---
+            const mocapBaseSize = 400;
+            const mocapSize = isMobile
+                ? Math.min(mocapBaseSize, window.innerWidth * 0.8)
+                : mocapBaseSize;
+
             const mocapSlot = document.createElement("div");
-            mocapSlot.style.width = "400px";
-            mocapSlot.style.height = "400px";
+            mocapSlot.style.width = mocapSize + "px";
+            mocapSlot.style.height = mocapSize + "px";
             mocapSlot.style.borderRadius = "2.5rem"; // More apple-like rounded
             mocapSlot.style.overflow = "hidden";
             mocapSlot.style.border = "1px solid rgba(255,255,255,0.1)";
@@ -327,8 +361,11 @@
             mocapSlot.id = "mocap-slot";
             mocapSlot.style.position = "absolute";
             mocapSlot.style.zIndex = "30"; // Middle: Behind Text (40), Above GIFs (10)
-            mocapSlot.style.left = `${centerX - 200}px`;
-            mocapSlot.style.top = `${centerY - 200}px`;
+
+            // Centered based on size
+            mocapSlot.style.left = `${centerX - mocapSize / 2}px`;
+            mocapSlot.style.top = `${centerY - mocapSize / 2}px`;
+
             layoutContainer.appendChild(mocapSlot);
 
             // Animate Mocap (Subtle float, not orbit)
@@ -352,8 +389,8 @@
 
                 const img = document.createElement("img");
                 img.src = src;
-                img.style.width = "150px";
-                img.style.height = "150px";
+                img.style.width = gifSize;
+                img.style.height = gifSize;
                 img.style.objectFit = "contain";
                 img.style.borderRadius = "1rem";
                 img.style.position = "absolute";
@@ -362,7 +399,7 @@
 
                 layoutContainer.appendChild(img);
 
-                const radius = 60;
+                const radius = orbitRadius;
                 // Same duration as text for synchronized "chasing" or orbiting around each other
                 // But Text was 15-20s. We should match duration for the pair i.
                 // Ideally we'd store the duration. Let's re-randomize but keep similar range.
@@ -597,18 +634,33 @@
     <Spinner />
 {/if}
 
+<svelte:window bind:scrollY />
+
 <!-- Container for scrolling height -->
 <!-- 250vh gives us enough room to scroll and rotate the cube -->
 <div class="scroll-container" bind:this={scrollContainer}>
     <div bind:this={container} class="canvas-container"></div>
 
     <!-- Optional: Scroll indicators or overlay text if needed, but text is on cube -->
-    <div class="scroll-helper">
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div
+        class="scroll-helper"
+        on:click={handleScrollClick}
+        style="cursor: pointer; pointer-events: auto;"
+    >
         <p>
-            Rolar para baixo <i
-                class="fa-solid fa-arrow-down"
-                style="margin-left: 0.5rem;"
-            ></i>
+            {#if scrollY > 100}
+                Rolar para cima <i
+                    class="fa-solid fa-arrow-up"
+                    style="margin-left: 0.5rem;"
+                ></i>
+            {:else}
+                Rolar para baixo <i
+                    class="fa-solid fa-arrow-down"
+                    style="margin-left: 0.5rem;"
+                ></i>
+            {/if}
         </p>
     </div>
 </div>
@@ -666,7 +718,7 @@
         font-family: "Montserrat", sans-serif;
         opacity: 0.8;
         z-index: 100;
-        pointer-events: none;
+        pointer-events: auto; /* Changed from none to allow click */
         animation: bounce 2s infinite;
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);

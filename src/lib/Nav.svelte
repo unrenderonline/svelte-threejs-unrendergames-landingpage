@@ -87,7 +87,7 @@
 </script>
 
 <nav
-    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 navbar"
+    class="fixed top-0 left-0 right-0 z-[200] transition-all duration-300 navbar"
     class:bg-white={showSolidNav}
     class:shadow-lg={showSolidNav}
     class:scrolled={showSolidNav}
@@ -123,9 +123,7 @@
                 aria-label="Toggle navigation"
             >
                 <svg
-                    class="w-6 h-6 navbar-toggler-icon"
-                    class:text-gray-900={showSolidNav}
-                    class:text-white={!showSolidNav}
+                    class="w-6 h-6 navbar-toggler-icon text-gray-900"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -264,7 +262,7 @@
                 <a
                     class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
                     href="/"
-                    on:click={handleNavigation}>INICIO</a
+                    on:click={handleNavigation}>Início</a
                 >
             </li>
             <li>
@@ -398,6 +396,6 @@
     }
 
     .navbar .navbar-toggler-icon {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(240, 240, 240, 0.8)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(10, 25, 47, 0.8)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
     }
 </style>

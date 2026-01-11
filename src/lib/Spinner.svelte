@@ -1,8 +1,13 @@
 <script>
   export let showText = true;
+  export let position = "fixed"; // 'fixed' or 'absolute'
+  export let background = "rgba(26, 26, 26, 0.95)";
 </script>
 
-<div class="spinner-container">
+<div
+  class="spinner-container"
+  style="position: {position}; background: {background};"
+>
   <div class="spinner"></div>
   {#if showText}
     <p class="loading-text">Carregando...</p>
@@ -11,7 +16,6 @@
 
 <style>
   .spinner-container {
-    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -20,7 +24,6 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(26, 26, 26, 0.95);
     backdrop-filter: blur(10px);
     z-index: 9999;
   }

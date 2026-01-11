@@ -212,31 +212,29 @@
 
       <!-- Game Content - Second on mobile, right on desktop -->
       <div
-        class="order-2 lg:order-2 flex flex-col justify-center h-full min-h-0 space-y-1 md:space-y-2 lg:space-y-4 text-center lg:text-left overflow-y-auto lg:overflow-visible pr-1"
+        class="order-2 lg:order-2 flex flex-col justify-between lg:justify-center h-full min-h-0 py-2 lg:py-0 text-center lg:text-left lg:overflow-visible overflow-hidden"
       >
         <!-- Game Title -->
-        <div class="game-title shrink-0">
+        <div class="game-title shrink-0 mb-1 lg:mb-4">
           <img
             src="/images/roblox_logo.png"
             alt="Roblox Logo"
-            class="h-8 sm:h-10 md:h-14 lg:h-20 xl:h-24 mb-1 md:mb-2 lg:mb-4 mx-auto lg:mx-0"
+            class="h-6 sm:h-10 md:h-14 lg:h-20 xl:h-24 mb-1 mx-auto lg:mx-0 object-contain"
           />
           <div
             class="w-12 md:w-16 lg:w-24 h-0.5 md:h-0.5 lg:h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-full mx-auto lg:mx-0"
           ></div>
         </div>
 
-        <div
-          class="game-description space-y-1 md:space-y-2 lg:space-y-4 shrink-0"
-        >
+        <div class="game-description shrink-0 mb-2 lg:mb-4">
           <h3
-            class="text-xs sm:text-sm md:text-lg lg:text-xl font-semibold text-white mb-1 md:mb-2 lg:mb-4"
+            class="text-[10px] xxs:text-xs sm:text-sm md:text-lg lg:text-xl font-semibold text-white mb-1 lg:mb-4 leading-tight"
           >
             Realize sua ação com quem domina o Roblox Studio: Mapas, Jogos e
             Eventos.
           </h3>
           <button
-            class="px-4 py-1.5 md:px-6 md:py-2 bg-gradient-to-r from-orange-600 to-red-600 rounded-full font-bold text-xs md:text-base hover:scale-105 transition-transform shadow-lg hover:shadow-orange-500/50"
+            class="px-3 py-1 md:px-6 md:py-2 bg-gradient-to-r from-orange-600 to-red-600 rounded-full font-bold text-[10px] md:text-base hover:scale-105 transition-transform shadow-lg hover:shadow-orange-500/50 mb-1"
             on:click={() =>
               contactModalState.update((s) => ({
                 ...s,
@@ -247,7 +245,7 @@
             FAZER ORÇAMENTO
           </button>
           <p
-            class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-400 max-w-lg mx-auto lg:mx-0 hidden md:block"
+            class="text-[9px] sm:text-xs md:text-sm lg:text-base text-gray-400 max-w-lg mx-auto lg:mx-0 hidden sm:block leading-tight"
           >
             Somos desenvolvedores especializados em criar mapas detalhados,
             jogos envolventes e réplicas fieis de lugares reais.
@@ -255,90 +253,110 @@
         </div>
 
         <!-- Game Features -->
-        <div class="space-y-1 md:space-y-2 lg:space-y-4 shrink min-h-0">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 md:gap-3">
+        <div class="shrink min-h-0 w-full">
+          <div class="grid grid-cols-2 gap-2 md:gap-3">
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-globe text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-globe text-white text-[10px] md:text-sm"></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
-                  Mapas e Réplicas de Lugares
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
+                  Mapas e Réplicas
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Desenvolvemos mapas complexos e réplicas digitais exatas de
-                espaços físicos, trazendo o mundo real para o metaverso do
-                Roblox.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Traga o mundo real para o metaverso.
               </p>
             </div>
 
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-gamepad text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-gamepad text-white text-[10px] md:text-sm"
+                  ></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
-                  Jogos e Experiências (Games)
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
+                  Jogos (Games)
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Criamos mecânicas de jogo divertidas e viciantes (Obbys,
-                Tycoons, RPGs) que garantem alto tempo de permanência e
-                engajamento.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Obbys, Tycoons e RPGs viciantes.
               </p>
             </div>
 
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-chart-bar text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-chart-bar text-white text-[10px] md:text-sm"
+                  ></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
-                  Métricas e Performance
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
+                  Métricas
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Acompanhe o sucesso através de dados precisos de visitas, tempo
-                de sessão e retenção de usuários na sua experiência.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Dados precisos de visitas e retenção.
               </p>
             </div>
 
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-users text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-users text-white text-[10px] md:text-sm"></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
-                  Comunidade e UGC
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
+                  Comunidade
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Aproveite o poder do Conteúdo Gerado pelo Usuário e construa uma
-                comunidade leal em torno da sua marca no Roblox.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Construa uma comunidade leal com UGC.
               </p>
             </div>
           </div>
         </div>
 
         <!-- Floating Images -->
-        <div class="relative">
+        <div class="relative hidden sm:block">
           <div
             class="floating-image absolute -top-8 -right-8 w-16 h-16 bg-gradient-to-br from-orange-400 to-red-600 opacity-60"
           ></div>

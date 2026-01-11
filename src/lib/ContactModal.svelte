@@ -129,11 +129,25 @@
             closeModal();
         }
     }
+    function portal(node) {
+        let target = document.body;
+        async function update() {
+            target.appendChild(node);
+            node.hidden = false;
+        }
+        update();
+        return {
+            destroy() {
+                if (node.parentNode) node.parentNode.removeChild(node);
+            },
+        };
+    }
 </script>
 
 {#if isOpen}
     <div
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        use:portal
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
         on:keydown={handleKeydown}
         role="dialog"
         aria-modal="true"
@@ -152,7 +166,7 @@
         <!-- Modal Panel -->
         <div
             bind:this={panelEl}
-            class="relative z-[110] w-full max-w-2xl bg-gradient-to-br from-unrender-purple to-[#0a0a1a] rounded-2xl shadow-2xl border border-white/10 overflow-hidden"
+            class="relative z-[10000] w-full max-w-2xl bg-gradient-to-br from-unrender-purple to-[#0a0a1a] rounded-2xl shadow-2xl border border-white/10 overflow-hidden"
             style="display: none;"
         >
             <!-- Header -->

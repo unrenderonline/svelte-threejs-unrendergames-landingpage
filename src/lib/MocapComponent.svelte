@@ -10,7 +10,7 @@
     let threeInstance = null;
     let avatar = null;
     let isRunning = false;
-    let isLoading = true; // Start loading immediately
+    let isLoading = false; // Start false, only show when clicking start
     let isIdle = true; // State to track if we are in idle mode (pre-start)
 
     const dispatch = createEventDispatcher();
@@ -464,12 +464,13 @@
     {/if}
 
     <!-- Loading Spinner -->
+    <!-- Loading Spinner -->
     {#if isLoading}
-        <div
-            class="absolute z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-        >
-            <Spinner showText={false} />
-        </div>
+        <Spinner
+            showText={false}
+            position="absolute"
+            background="rgba(0,0,0,0.3)"
+        />
     {/if}
 </div>
 

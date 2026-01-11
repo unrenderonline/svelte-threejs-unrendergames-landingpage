@@ -16,6 +16,15 @@
 
   // Scroll progress (0 to 1)
   let scrollProgress = 0;
+  let scrollY = 0;
+
+  const handleScrollClick = () => {
+    if (scrollY > 100) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
+    }
+  };
 
   // Clipping plane for 3D reveal (Left to Right)
   const revealPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), -5);
@@ -906,6 +915,8 @@
   <div class="scroll-spacer"></div>
 </div>
 
+<svelte:window bind:scrollY />
+
 <div class="page-container">
   <canvas bind:this={canvas} class="fixed-canvas"></canvas>
 
@@ -913,12 +924,25 @@
     <h1>Web Interativa</h1>
   </div>
 
-  <div class="scroll-fab">
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div
+    class="scroll-fab"
+    on:click={handleScrollClick}
+    style="cursor: pointer; pointer-events: auto;"
+  >
     <p>
-      Rolar para baixo <i
-        class="fa-solid fa-arrow-down"
-        style="margin-left: 0.5rem;"
-      ></i>
+      {#if scrollY > 100}
+        Rolar para cima <i
+          class="fa-solid fa-arrow-up"
+          style="margin-left: 0.5rem;"
+        ></i>
+      {:else}
+        Rolar para baixo <i
+          class="fa-solid fa-arrow-down"
+          style="margin-left: 0.5rem;"
+        ></i>
+      {/if}
     </p>
   </div>
 </div>
@@ -968,7 +992,7 @@
     right: 2rem;
     color: white;
     z-index: 100;
-    pointer-events: none;
+    pointer-events: auto;
     animation: bounce 2s infinite;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);

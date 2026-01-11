@@ -10,6 +10,15 @@
   let models = {};
   let isLoading = true;
   let scrollCleanup;
+  let scrollY = 0;
+
+  const handleScrollClick = () => {
+    if (scrollY > 100) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
+    }
+  };
 
   const modelPaths = {
     lowPoly: "/models/3dmodel/low_poly_character.glb",
@@ -83,29 +92,31 @@
               }
             });
 
-            // Center model
+            // 1. Reset transforms
+            model.position.set(0, 0, 0);
+            model.rotation.set(0, 0, 0);
+            model.scale.set(1, 1, 1);
+
+            // 2. Initial Bounding Box to determine scale
             const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            model.position.sub(center);
-
-            // Normalize scale (approximate)
-
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
+
+            // Base scale factor to normalize size
             let scaleFactor = 2.5 / maxDim;
-            let targetX = 2;
+            let targetX = 2; // Right side
 
             // Custom adjustments per model
             if (key === "building") {
-              scaleFactor *= 2.0; // Make building bigger
-              model.position.y += 1.5; // Move building up
-              model.userData.targetRotation = Math.PI; // Face backwards
+              scaleFactor *= 2.0;
+              model.userData.targetRotation = Math.PI;
             } else if (key === "chair") {
-              model.userData.targetRotation = Math.PI; // Face backwards
+              model.userData.targetRotation = Math.PI;
             } else if (key === "skier") {
-              scaleFactor *= 10.0; // Make engineer MUCH bigger (attempt 3)
+              scaleFactor *= 10.0;
               model.userData.targetRotation = 0;
-              targetX = 5.0; // Move further right (attempt 3)
+              targetX = 5.0; // Custom position for Skier
+              model.position.x += 1.0;
             } else {
               model.userData.targetRotation = 0;
             }
@@ -113,7 +124,10 @@
             model.scale.setScalar(scaleFactor);
 
             // Move to right side
-            model.position.x = targetX;
+            model.position.x += targetX;
+            // Height (Y) depends on the model export; assuming Y=0 is correct
+
+            model.userData.originalScale = scaleFactor;
 
             models[key] = model;
             resolve();
@@ -389,6 +403,8 @@
   <Spinner />
 {/if}
 
+<svelte:window bind:scrollY />
+
 <div class="page-container">
   <canvas bind:this={canvas} class="fixed-canvas"></canvas>
 
@@ -437,12 +453,25 @@
     </div>
   </section>
 
-  <div class="scroll-fab">
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div
+    class="scroll-fab"
+    on:click={handleScrollClick}
+    style="cursor: pointer; pointer-events: auto;"
+  >
     <p>
-      Rolar para baixo <i
-        class="fa-solid fa-arrow-down"
-        style="margin-left: 0.5rem;"
-      ></i>
+      {#if scrollY > 100}
+        Rolar para cima <i
+          class="fa-solid fa-arrow-up"
+          style="margin-left: 0.5rem;"
+        ></i>
+      {:else}
+        Rolar para baixo <i
+          class="fa-solid fa-arrow-down"
+          style="margin-left: 0.5rem;"
+        ></i>
+      {/if}
     </p>
   </div>
 </div>
@@ -539,7 +568,7 @@
     right: 2rem;
     color: white;
     z-index: 100;
-    pointer-events: none;
+    pointer-events: auto;
     animation: bounce 2s infinite;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);

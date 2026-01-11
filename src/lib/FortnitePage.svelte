@@ -204,14 +204,14 @@
 
       <!-- Game Content - Second on mobile, right on desktop -->
       <div
-        class="order-2 lg:order-2 flex flex-col justify-center h-full min-h-0 space-y-1 md:space-y-2 lg:space-y-4 text-center lg:text-left overflow-y-auto lg:overflow-visible pr-1"
+        class="order-2 lg:order-2 flex flex-col justify-between lg:justify-center h-full min-h-0 py-2 lg:py-0 text-center lg:text-left lg:overflow-visible overflow-hidden"
       >
         <!-- Game Title -->
-        <div class="game-title shrink-0">
+        <div class="game-title shrink-0 mb-1 lg:mb-4">
           <img
             src="/images/fortnite-logo.png"
             alt="Fortnite Logo"
-            class="h-8 sm:h-10 md:h-14 lg:h-20 xl:h-24 mb-1 md:mb-2 lg:mb-4 mx-auto lg:mx-0"
+            class="h-6 sm:h-10 md:h-14 lg:h-20 xl:h-24 mb-1 mx-auto lg:mx-0 object-contain"
           />
           <div
             class="w-12 md:w-16 lg:w-24 h-0.5 md:h-0.5 lg:h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto lg:mx-0"
@@ -219,17 +219,15 @@
         </div>
 
         <!-- Game Description -->
-        <div
-          class="game-description space-y-1 md:space-y-2 lg:space-y-4 shrink-0"
-        >
+        <div class="game-description shrink-0 mb-2 lg:mb-4">
           <h3
-            class="text-xs sm:text-sm md:text-lg lg:text-xl font-semibold text-white mb-1 md:mb-2 lg:mb-4"
+            class="text-[10px] xxs:text-xs sm:text-sm md:text-lg lg:text-xl font-semibold text-white mb-1 lg:mb-4 leading-tight"
           >
             Nós transformamos seus objetivos de marketing em experiências
             imersivas dentro do Fortnite.
           </h3>
           <button
-            class="px-4 py-1.5 md:px-6 md:py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full font-bold text-xs md:text-base hover:scale-105 transition-transform shadow-lg hover:shadow-purple-500/50"
+            class="px-3 py-1 md:px-6 md:py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full font-bold text-[10px] md:text-base hover:scale-105 transition-transform shadow-lg hover:shadow-purple-500/50 mb-1"
             on:click={() =>
               contactModalState.update((s) => ({
                 ...s,
@@ -240,7 +238,7 @@
             FAZER ORÇAMENTO
           </button>
           <p
-            class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-400 max-w-lg mx-auto lg:mx-0 hidden md:block"
+            class="text-[9px] sm:text-xs md:text-sm lg:text-base text-gray-400 max-w-lg mx-auto lg:mx-0 hidden sm:block leading-tight"
           >
             Através de mundos e jogos personalizados, criamos uma conexão
             duradoura com milhões de jogadores, convertendo engajamento em
@@ -249,88 +247,110 @@
         </div>
 
         <!-- Game Features -->
-        <div class="space-y-1 md:space-y-2 lg:space-y-4 shrink min-h-0">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 md:gap-3">
+        <div class="shrink min-h-0 w-full">
+          <div class="grid grid-cols-2 gap-2 md:gap-3">
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-globe text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-globe text-white text-[10px] md:text-sm"></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
-                  Mundos Virtuais Personalizados
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
+                  Mundos Virtuais
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Crie desde réplicas de locais a jogos com mecânicas exclusivas,
-                crie experiências de marca.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Crie réplicas e experiências de marca.
               </p>
             </div>
 
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-gamepad text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-gamepad text-white text-[10px] md:text-sm"
+                  ></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
-                  Gamificação e Engajamento
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
+                  Gamificação
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Engaje e fidelize jogadores com desafios, missões e eventos
-                virtuais.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Engaje e fidelize com missões e eventos.
               </p>
             </div>
 
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-chart-bar text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-chart-bar text-white text-[10px] md:text-sm"
+                  ></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
-                  Métricas e Retorno
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
+                  Retorno Real
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Meça o retorno real no negócio através do tráfego no site, uso
-                de cupons e menções nas redes sociais.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Tráfego, cupons e métricas de negócio.
               </p>
             </div>
 
             <div
-              class="feature-item bg-white/10 backdrop-blur-sm rounded-xl p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
+              class="feature-item bg-white/10 backdrop-blur-sm rounded-lg p-1.5 md:p-3 border border-white/20 hover:bg-white/20 transition-all duration-300"
             >
-              <div class="flex items-center space-x-1.5 md:space-x-2 mb-1">
+              <div
+                class="flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-2 mb-1"
+              >
                 <div
-                  class="feature-icon w-4 h-4 md:w-6 md:h-6 rounded-lg flex items-center justify-center"
+                  class="feature-icon w-5 h-5 md:w-6 md:h-6 rounded-lg flex items-center justify-center bg-white/10 shrink-0"
                 >
-                  <i class="fas fa-users text-white text-xs md:text-lg"></i>
+                  <i class="fas fa-users text-white text-[10px] md:text-sm"></i>
                 </div>
-                <h4 class="text-[10px] md:text-sm lg:text-base font-semibold">
+                <h4
+                  class="text-[9px] md:text-sm lg:text-base font-semibold leading-none sm:leading-normal"
+                >
                   Comunidade
                 </h4>
               </div>
-              <p class="text-gray-300 text-[9px] md:text-xs leading-tight">
-                Para públicos de games e tecnologia, uma boa experiência é
-                naturalmente impulsionada e validada pela própria comunidade.
+              <p
+                class="text-gray-300 text-[8px] md:text-xs leading-tight hidden xs:block"
+              >
+                Experiências validadas pela comunidade.
               </p>
             </div>
           </div>
         </div>
 
         <!-- Floating Images -->
-        <div class="relative">
+        <div class="relative hidden sm:block">
           <div
             class="floating-image absolute -top-8 -right-8 w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-600 opacity-60"
           ></div>
