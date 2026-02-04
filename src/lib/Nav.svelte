@@ -160,6 +160,13 @@
                             href="/jogos">Jogos</a
                         >
                     </li>
+                    <!--
+                        Temporarily hidden: "Web Interativa" is not ready for public
+                        use. To re-enable, remove this comment block (restore the
+                        <li> + <a href="/web-interativa">...</a> element).
+                        Date: 2026-02-04
+                    -->
+                    <!--
                     <li>
                         <a
                             class="transition-colors hover:text-unrender-accent nav-link"
@@ -168,6 +175,7 @@
                             href="/web-interativa">Web Interativa</a
                         >
                     </li>
+                    -->
                     <li>
                         <a
                             class="transition-colors hover:text-unrender-accent nav-link"
@@ -272,6 +280,12 @@
                     on:click={handleNavigation}>Jogos</a
                 >
             </li>
+            <!--
+                Temporarily hidden: "Web Interativa" is not ready for public
+                use. To re-enable, remove this comment block and the surrounding
+                HTML comment. Date: 2026-02-04
+            -->
+            <!--
             <li>
                 <a
                     class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"
@@ -279,6 +293,7 @@
                     on:click={handleNavigation}>Web Interativa</a
                 >
             </li>
+            -->
             <li>
                 <a
                     class="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-50 hover:text-unrender-accent transition-colors border-l-4 border-transparent hover:border-unrender-accent"

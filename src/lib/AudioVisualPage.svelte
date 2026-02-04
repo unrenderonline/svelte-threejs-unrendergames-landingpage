@@ -139,14 +139,14 @@
             // Use unified background color to hide cube edges
             const bgColor = "#000000";
 
-            // Face 1: Front
-            const face1Canvas = createTextTexture(
-                "AUDIOVISUAL\n\nReal-time 3D for VFX\nGreen Screen & Virtual Sets\nMovie & TV Production\n\n(3D Spatial Audio Available)",
-                "#ffffff",
-                bgColor,
-            );
-            const face1Texture = new THREE.CanvasTexture(face1Canvas);
-            face1Texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            // Face 1: Front - Text removed as per request
+            // const face1Canvas = createTextTexture(
+            //    "AUDIOVISUAL\n\nReal-time 3D for VFX\nGreen Screen & Virtual Sets\nMovie & TV Production\n\n(3D Spatial Audio Available)",
+            //    "#ffffff",
+            //    bgColor,
+            // );
+            // const face1Texture = new THREE.CanvasTexture(face1Canvas);
+            // face1Texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
             // Face 2: Bottom (Rotates up)
             // Text removed as per request. Using black material matching other sides.
@@ -157,7 +157,7 @@
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Left
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Top
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Bottom (Face 2) - Changed to Color
-                new THREE.MeshBasicMaterial({ map: face1Texture }), // Front (Face 1)
+                new THREE.MeshBasicMaterial({ color: 0x000000 }), // Front (Face 1) - Text Removed
                 new THREE.MeshBasicMaterial({ color: 0x000000 }), // Back
             ];
 

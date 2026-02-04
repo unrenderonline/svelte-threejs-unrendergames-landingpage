@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import * as THREE from "three";
   import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
   import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
@@ -8,32 +8,27 @@
   let canvas;
   let scene, camera, renderer;
   let models = {};
+  let mixers = {}; // Animation Mixers
+  let clock = new THREE.Clock(); // Clock for animations
+  let modelGroup; // Parent group for all models to handle shared positioning
   let isLoading = true;
   let scrollCleanup;
   let scrollY = 0;
 
-  const handleScrollClick = () => {
-    if (scrollY > 100) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
-    }
-  };
-
   const modelPaths = {
-    lowPoly: "/models/3dmodel/low_poly_character.glb",
-    skier: "/models/3dmodel/engineer_tf2.glb",
+    lowPoly: "/models/3dmodel/lowpoly_car.glb",
+    skier: "/models/3dmodel/p.u.c._security_bot_7.glb",
     chair: "/models/3dmodel/gaming_chair.glb",
-    building: "/models/3dmodel/lowpoly_urban_building.glb",
+    building: "/models/3dmodel/modern_home.glb",
   };
 
   onMount(async () => {
-    // Prevent horizontal scroll on this page
     document.body.style.overflowX = "hidden";
 
     try {
-      await loadModels();
       initScene();
+      await loadModels();
+      setupLayout(); // Initial positioning
       await setupScrollAnimations();
       animate();
     } catch (error) {
@@ -41,22 +36,59 @@
       isLoading = false;
     }
 
+    window.addEventListener("resize", onWindowResize);
+
     return () => {
-      if (renderer) {
-        renderer.dispose();
-      }
+      window.removeEventListener("resize", onWindowResize);
+      if (renderer) renderer.dispose();
       if (scrollCleanup) scrollCleanup();
-      // Restore horizontal scroll
       document.body.style.overflowX = "";
     };
   });
 
+  function initScene() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a0a); // Slightly darker bg
+
+    camera = new THREE.PerspectiveCamera(
+      45, // Smaller FOV for less distortion
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.z = 8; // Further back for better view
+
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+    dirLight.position.set(2, 5, 5);
+    scene.add(dirLight);
+    
+    const blueLight = new THREE.PointLight(0x3b82f6, 5); // Blue tint light for accents
+    blueLight.position.set(-5, 0, 5);
+    scene.add(blueLight);
+
+    // Group to hold all models - allows moving them all together for responsive layout
+    modelGroup = new THREE.Group();
+    scene.add(modelGroup);
+  }
+
   async function loadModels() {
     const loader = new GLTFLoader();
     const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath(
-      "https://www.gstatic.com/draco/versioned/decoders/1.5.6/",
-    );
+    dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
     loader.setDRACOLoader(dracoLoader);
 
     const loadPromises = Object.entries(modelPaths).map(([key, path]) => {
@@ -66,140 +98,133 @@
           (gltf) => {
             const model = gltf.scene;
 
-            // Fix for models with missing tangents (like building.glb)
+            // Fix tangents if needed
             model.traverse((child) => {
               if (child.isMesh) {
-                // Check if material has normal map but geometry lacks tangents
-                if (
-                  child.material.normalMap &&
-                  !child.geometry.attributes.tangent
-                ) {
-                  try {
-                    // Try to compute tangents
-                    if (child.geometry.attributes.uv) {
-                      child.geometry.computeTangents();
-                    } else {
-                      throw new Error("No UVs");
-                    }
-                  } catch (e) {
-                    console.warn(
-                      `Could not compute tangents for ${key}/${child.name}, removing normal map to ensure visibility.`,
-                    );
-                    child.material.normalMap = null;
-                    child.material.needsUpdate = true;
-                  }
+                if (child.material.normalMap && !child.geometry.attributes.tangent) {
+                   if (child.geometry.attributes.uv) child.geometry.computeTangents();
+                   else child.material.normalMap = null;
                 }
               }
             });
 
-            // 1. Reset transforms
-            model.position.set(0, 0, 0);
-            model.rotation.set(0, 0, 0);
-            model.scale.set(1, 1, 1);
-
-            // 2. Initial Bounding Box to determine scale
+            // Normalize Model Size & Position
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
+            
+            // 1. Center the model at 0,0,0 local space (by offsetting child meshes or wrapping in group, simple offset here)
+            // Note: Since we are adding 'model' which is a Group usually, we can just center it relative to its pivot if pivot is weird
+            // But GLTF usually has pivot at 0,0,0 world.
+            // Best way: Wrap in a container specific for this model that corrects pivot
+            
+            const pivotContainer = new THREE.Group();
+            pivotContainer.add(model);
+            
+            // Re-calc box to be sure
+            const box2 = new THREE.Box3().setFromObject(model);
+            const center2 = box2.getCenter(new THREE.Vector3());
+            
+            model.position.x = -center2.x;
+            model.position.y = -center2.y;
+            model.position.z = -center2.z;
 
-            // Base scale factor to normalize size
-            let scaleFactor = 2.5 / maxDim;
-            let targetX = 2; // Right side
+            // 2. Scale container to standard size (approx 3.5 units)
+            const targetSize = 3.5; 
+            const scale = targetSize / maxDim;
+            pivotContainer.scale.setScalar(scale);
 
-            // Custom adjustments per model
-            if (key === "building") {
-              scaleFactor *= 2.0;
-              model.userData.targetRotation = Math.PI;
-            } else if (key === "chair") {
-              model.userData.targetRotation = Math.PI;
-            } else if (key === "skier") {
-              scaleFactor *= 10.0;
-              model.userData.targetRotation = 0;
-              targetX = 5.0; // Custom position for Skier
-              model.position.x += 1.0;
-            } else {
-              model.userData.targetRotation = 0;
+            // Store original scale
+            pivotContainer.userData.originalScale = scale;
+            
+            // Set initial visibility
+            pivotContainer.visible = false;
+            
+            // Store specific rotation preferences and rotate the CONTAINER
+            if (key === 'building') pivotContainer.rotation.y = Math.PI;
+            if (key === 'chair') pivotContainer.rotation.y = Math.PI;
+
+            // Handle Animations (Specifically for Skier / KGirls)
+            if (key === 'skier' && gltf.animations && gltf.animations.length > 0) {
+               const mixer = new THREE.AnimationMixer(model);
+               const clip = THREE.AnimationClip.findByName(gltf.animations, "Take 01");
+               
+               if (clip) {
+                   const action = mixer.clipAction(clip);
+                   action.play();
+                   mixers[key] = mixer;
+               } else {
+                   // Fallback: play first animation if specific one not found
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                    mixers[key] = mixer;
+               }
             }
 
-            model.scale.setScalar(scaleFactor);
-
-            // Move to right side
-            model.position.x += targetX;
-            // Height (Y) depends on the model export; assuming Y=0 is correct
-
-            model.userData.originalScale = scaleFactor;
-
-            models[key] = model;
+            // Save to dictionary and add to the shared group
+            models[key] = pivotContainer;
+            modelGroup.add(pivotContainer);
+            
             resolve();
           },
           undefined,
-          reject,
+          reject
         );
       });
     });
 
     await Promise.all(loadPromises);
+    
+    // Show first model
+    if (models.lowPoly) {
+       models.lowPoly.visible = true;
+    }
+    
     isLoading = false;
   }
 
-  function initScene() {
-    // Scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
+  function setupLayout() {
+    if (!modelGroup) return;
 
-    // Camera
-    camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000,
-    );
-    camera.position.z = 5;
+    const width = window.innerWidth;
+    const isMobile = width < 768;
 
-    // Renderer
-    renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: true,
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
-
-    const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1.5);
-    directionalLight1.position.set(5, 5, 5);
-    scene.add(directionalLight1);
-
-    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight2.position.set(-5, -5, -5);
-    scene.add(directionalLight2);
-
-    const spotLight = new THREE.SpotLight(0xffffff, 1);
-    spotLight.position.set(0, 10, 0);
-    spotLight.angle = Math.PI / 4;
-    spotLight.penumbra = 0.1;
-    scene.add(spotLight);
-
-    // Add models to scene but hide them initially
-    Object.values(models).forEach((model) => {
-      scene.add(model);
-      model.visible = false;
-    });
-
-    // Don't set initial visibility here, let ScrollTrigger handle it to avoid "double" appearance
-    // or set it but ensure ScrollTrigger knows.
-    // Actually, setting it here ensures something is seen if JS fails or before scroll.
-    if (models.lowPoly) {
-      models.lowPoly.visible = true;
-      models.lowPoly.rotation.y = -0.5;
+    if (isMobile) {
+        // Mobile: Center horizontally, move up slightly
+        modelGroup.position.x = 0;
+        modelGroup.position.y = 1.0; 
+        camera.position.z = 10; // Zoom out a bit more on mobile
+    } else {
+        // Desktop: Move to the right side
+        // Calculate position based on aspect ratio to be roughly 25% from right edge
+        const aspect = width / window.innerHeight;
+        // Visible width at z=0 with camera.position.z=8 and fov=45
+        const vFov = (camera.fov * Math.PI) / 180;
+        const height = 2 * Math.tan(vFov / 2) * camera.position.z;
+        const visibleWidth = height * aspect;
+        
+        // Place it at 1/4 of the width (right side)
+        modelGroup.position.x = visibleWidth * 0.25; 
+        modelGroup.position.y = 0;
     }
+  }
 
-    // Handle resize
-    window.addEventListener("resize", onWindowResize);
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    setupLayout();
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    
+    // Update Animation Mixers
+    const delta = clock.getDelta();
+    Object.values(mixers).forEach(mixer => mixer.update(delta));
+    
+    renderer.render(scene, camera);
   }
 
   async function setupScrollAnimations() {
@@ -207,196 +232,92 @@
       const gsapModule = await import("gsap");
       const gsap = gsapModule.gsap || gsapModule.default || gsapModule;
       const stModule = await import("gsap/ScrollTrigger");
-      const ScrollTrigger =
-        stModule.ScrollTrigger || stModule.default || stModule;
+      const ScrollTrigger = stModule.ScrollTrigger || stModule.default || stModule;
       gsap.registerPlugin(ScrollTrigger);
 
-      const transitionDuration = 0.8;
-      const spinEase = "back.out(1.2)";
+      const switchModel = (nextModel) => {
+         Object.values(models).forEach(m => {
+            if (m !== nextModel) m.visible = false;
+         });
+         
+         if (nextModel) { 
+             nextModel.visible = true;
+             
+             // Pop-in animation
+             gsap.fromTo(nextModel.scale, 
+                { x: 0, y: 0, z: 0 },
+                { 
+                    x: nextModel.userData.originalScale, 
+                    y: nextModel.userData.originalScale, 
+                    z: nextModel.userData.originalScale, 
+                    duration: 0.6,
+                    ease: "back.out(1.7)",
+                    overwrite: true
+                }
+             );
+             
+             // Spin entry
+             // We adjust rotation relative to whatever current rotation is or base
+             const baseRot = (models.building === nextModel || models.chair === nextModel) ? Math.PI : 0;
+            
+             gsap.fromTo(nextModel.rotation, 
+                { y: baseRot - Math.PI },
+                {
+                    y: baseRot,
+                    duration: 0.8,
+                    ease: "power2.out",
+                    overwrite: true
+                }
+             );
+         }
+      };
 
-      // Helper for transitions
-      const switchModel = (showModel, hideModels, isInitial = false) => {
-        // If the model is already visible and this isn't a forced update, skip
-        // This prevents the "double animation" or "stuck" feeling if it re-triggers
-        if (showModel.visible && !isInitial) return;
+      // Define sections and their corresponding models
+      const sections = [
+        { trigger: ".section-1", model: models.lowPoly },
+        { trigger: ".section-2", model: models.skier },
+        { trigger: ".section-3", model: models.chair },
+        { trigger: ".section-4", model: models.building },
+      ];
 
-        hideModels.forEach((m) => {
-          if (m) m.visible = false;
+      sections.forEach(({ trigger, model }) => {
+        if (!model) return;
+
+        ScrollTrigger.create({
+            trigger: trigger,
+            start: "top 60%",
+            end: "bottom 60%",
+            onEnter: () => switchModel(model),
+            onEnterBack: () => switchModel(model)
         });
 
-        if (showModel) {
-          showModel.visible = true;
-
-          const targetRot = showModel.userData.targetRotation || 0;
-
-          // Reset rotation for the spin effect
-          // We want it to spin INTO position
-          gsap.fromTo(
-            showModel.rotation,
-            { y: targetRot - Math.PI * 2 }, // Start from a full rotation back relative to target
-            {
-              y: targetRot,
-              duration: transitionDuration,
-              ease: spinEase,
-              overwrite: true,
-            },
-          );
-
-          gsap.fromTo(
-            showModel.scale,
-            { x: 0, y: 0, z: 0 },
-            {
-              x: showModel.userData.originalScale || showModel.scale.x,
-              y: showModel.userData.originalScale || showModel.scale.y,
-              z: showModel.userData.originalScale || showModel.scale.z,
-              duration: 0.5,
-              ease: "power2.out",
-              overwrite: true,
-            },
-          );
-        }
-      };
-
-      // Store original scales
-      Object.values(models).forEach((m) => {
-        m.userData.originalScale = m.scale.x;
+        // Continuous Rotation on Scroll
+        gsap.to(model.rotation, {
+            y: "+=2", // Rotate 2 radians over the scroll duration
+            ease: "none",
+            scrollTrigger: {
+                trigger: trigger,
+                start: "top bottom",
+                end: "bottom top",
+                scrub: 1
+            }
+        });
       });
 
-      // Section 1: Low Poly
-      ScrollTrigger.create({
-        trigger: ".section-1",
-        start: "top 60%", // Trigger earlier
-        end: "bottom 60%",
-        onEnter: () =>
-          switchModel(models.lowPoly, [
-            models.skier,
-            models.chair,
-            models.building,
-          ]),
-        onEnterBack: () =>
-          switchModel(models.lowPoly, [
-            models.skier,
-            models.chair,
-            models.building,
-          ]),
-      });
+      scrollCleanup = () => ScrollTrigger.getAll().forEach(t => t.kill());
 
-      // Continuous rotation for active model
-      gsap.to(models.lowPoly.rotation, {
-        y: (models.lowPoly.userData.targetRotation || 0) + Math.PI / 4,
-        scrollTrigger: {
-          trigger: ".section-1",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
-
-      // Section 2: Skier
-      ScrollTrigger.create({
-        trigger: ".section-2",
-        start: "top 60%",
-        end: "bottom 60%",
-        onEnter: () =>
-          switchModel(models.skier, [
-            models.lowPoly,
-            models.chair,
-            models.building,
-          ]),
-        onEnterBack: () =>
-          switchModel(models.skier, [
-            models.lowPoly,
-            models.chair,
-            models.building,
-          ]),
-      });
-
-      gsap.to(models.skier.rotation, {
-        y: (models.skier.userData.targetRotation || 0) + Math.PI / 4,
-        scrollTrigger: {
-          trigger: ".section-2",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
-
-      // Section 3: Chair
-      ScrollTrigger.create({
-        trigger: ".section-3",
-        start: "top 60%",
-        end: "bottom 60%",
-        onEnter: () =>
-          switchModel(models.chair, [
-            models.lowPoly,
-            models.skier,
-            models.building,
-          ]),
-        onEnterBack: () =>
-          switchModel(models.chair, [
-            models.lowPoly,
-            models.skier,
-            models.building,
-          ]),
-      });
-
-      gsap.to(models.chair.rotation, {
-        y: (models.chair.userData.targetRotation || 0) + Math.PI / 4,
-        scrollTrigger: {
-          trigger: ".section-3",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
-
-      // Section 4: Building
-      ScrollTrigger.create({
-        trigger: ".section-4",
-        start: "top 60%",
-        end: "bottom bottom", // Keep it visible until the very end
-        onEnter: () =>
-          switchModel(models.building, [
-            models.lowPoly,
-            models.skier,
-            models.chair,
-          ]),
-        onEnterBack: () =>
-          switchModel(models.building, [
-            models.lowPoly,
-            models.skier,
-            models.chair,
-          ]),
-      });
-
-      gsap.to(models.building.rotation, {
-        y: (models.building.userData.targetRotation || 0) + Math.PI / 4,
-        scrollTrigger: {
-          trigger: ".section-4",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
-
-      scrollCleanup = () => {
-        ScrollTrigger.getAll().forEach((t) => t.kill());
-      };
     } catch (e) {
-      console.warn("GSAP not available for scroll animations", e);
+      console.warn("GSAP error:", e);
     }
   }
-
-  function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-  }
-
-  function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  }
+  
+  const handleScrollClick = () => {
+    const isBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
+    window.scrollTo({ 
+        top: isBottom ? 0 : window.innerHeight, 
+        behavior: "smooth" 
+    });
+  };
 </script>
 
 {#if isLoading}
@@ -405,194 +326,86 @@
 
 <svelte:window bind:scrollY />
 
-<div class="page-container">
-  <canvas bind:this={canvas} class="fixed-canvas"></canvas>
-
-  <section class="section section-1">
-    <div class="content">
-      <h1 class="title">Personagens Low Poly</h1>
-      <p class="text">Estilo e Performance</p>
-      <p class="description">
-        Personagens otimizados com estilo visual único, perfeitos para jogos
-        mobile e web onde a performance é crucial sem perder a identidade
-        visual.
-      </p>
-    </div>
-  </section>
-
-  <section class="section section-2">
-    <div class="content">
-      <h2 class="title">Animação e Movimento</h2>
-      <p class="text">Vida em cada frame</p>
-      <p class="description">
-        Modelos preparados para animação (rigging), permitindo movimentos
-        fluidos e naturais para qualquer tipo de ação ou esporte.
-      </p>
-    </div>
-  </section>
-
-  <section class="section section-3">
-    <div class="content">
-      <h2 class="title">Props e Objetos</h2>
-      <p class="text">Detalhamento Imersivo</p>
-      <p class="description">
-        Objetos de cena detalhados como esta cadeira gamer, criando ambientes
-        ricos e verossímeis para seus cenários virtuais.
-      </p>
-    </div>
-  </section>
-
-  <section class="section section-4">
-    <div class="content">
-      <h2 class="title">Arquitetura e Cenários</h2>
-      <p class="text">Escala e Complexidade</p>
-      <p class="description">
-        Construções e ambientes completos, desde pequenas casas até grandes
-        edifícios, mantendo a coerência visual do projeto.
-      </p>
-    </div>
-  </section>
-
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div
-    class="scroll-fab"
-    on:click={handleScrollClick}
-    style="cursor: pointer; pointer-events: auto;"
-  >
-    <p>
-      {#if scrollY > 100}
-        Rolar para cima <i
-          class="fa-solid fa-arrow-up"
-          style="margin-left: 0.5rem;"
-        ></i>
-      {:else}
-        Rolar para baixo <i
-          class="fa-solid fa-arrow-down"
-          style="margin-left: 0.5rem;"
-        ></i>
-      {/if}
-    </p>
+<div class="relative w-full bg-[#0a0a0a] overflow-x-hidden">
+  
+  <!-- 3D Canvas Background -->
+  <div class="fixed top-0 left-0 w-full h-[100vh] z-0 pointer-events-none">
+    <canvas bind:this={canvas} class="w-full h-full block"></canvas>
   </div>
+
+  <!-- Content Overlay -->
+  <div class="relative z-10 w-full">
+    
+    <!-- Section 1 -->
+    <section class="section-1 min-h-screen flex items-center p-6 md:p-12 pointer-events-none">
+      <div class="w-full md:w-5/12 ml-0 md:ml-12 p-8 bg-black/40 backdrop-blur-md rounded-3xl border border-white/10 pointer-events-auto transform transition-all hover:bg-black/50 hover:border-white/20">
+        <h1 class="text-3xl md:text-5xl font-bold mb-4 text-white font-['Montserrat']">
+            Personagens Low Poly
+        </h1>
+        <p class="text-xl text-indigo-400 font-semibold mb-6">Estilo e Performance</p>
+        <p class="text-base md:text-lg text-gray-300 leading-relaxed">
+          Personagens otimizados com estilo visual único, perfeitos para jogos
+          mobile e web onde a performance é crucial sem perder a identidade
+          visual. Nossos modelos garantem altas taxas de quadros em qualquer dispositivo.
+        </p>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="section-2 min-h-screen flex items-center p-6 md:p-12 pointer-events-none">
+      <div class="w-full md:w-5/12 ml-0 md:ml-12 p-8 bg-black/40 backdrop-blur-md rounded-3xl border border-white/10 pointer-events-auto transform transition-all hover:bg-black/50 hover:border-white/20">
+        <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white font-['Montserrat']">
+            Animação e Movimento
+        </h2>
+        <p class="text-xl text-blue-400 font-semibold mb-6">Vida em cada frame</p>
+        <p class="text-base md:text-lg text-gray-300 leading-relaxed">
+          Modelos preparados para animação (rigging) profissional, permitindo movimentos
+          fluidos e naturais para qualquer tipo de ação, esporte ou combate. 
+          Compatível com Mixamo e pipelines de animação padrão da indústria.
+        </p>
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="section-3 min-h-screen flex items-center p-6 md:p-12 pointer-events-none">
+       <div class="w-full md:w-5/12 ml-0 md:ml-12 p-8 bg-black/40 backdrop-blur-md rounded-3xl border border-white/10 pointer-events-auto transform transition-all hover:bg-black/50 hover:border-white/20">
+        <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white font-['Montserrat']">
+            Props e Objetos
+        </h2>
+        <p class="text-xl text-purple-400 font-semibold mb-6">Detalhamento Imersivo</p>
+        <p class="text-base md:text-lg text-gray-300 leading-relaxed">
+          Objetos de cena detalhados como esta cadeira gamer, criando ambientes
+          ricos e verossímeis. Texturas PBR de alta qualidade para realismo
+          maximo em renders e games next-gen.
+        </p>
+      </div>
+    </section>
+
+    <!-- Section 4 -->
+    <section class="section-4 min-h-screen flex items-center p-6 md:p-12 pointer-events-none">
+       <div class="w-full md:w-5/12 ml-0 md:ml-12 p-8 bg-black/40 backdrop-blur-md rounded-3xl border border-white/10 pointer-events-auto transform transition-all hover:bg-black/50 hover:border-white/20">
+        <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white font-['Montserrat']">
+            Arquitetura e Cenários
+        </h2>
+        <p class="text-xl text-teal-400 font-semibold mb-6">Escala e Complexidade</p>
+        <p class="text-base md:text-lg text-gray-300 leading-relaxed">
+          Construções completas e modularizadas. De pequenas casas a arranha-céus,
+          mantendo a coerência visual e otimização de draw calls para grandes
+          cenários abertos.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Scroll Button -->
+  <button
+    on:click={handleScrollClick}
+    class="fixed bottom-8 right-8 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-6 py-3 rounded-full border border-white/10 shadow-lg transition-all duration-300 animate-bounce flex items-center gap-2 group pointer-events-auto"
+  >
+    <span class="font-semibold text-sm">
+        {scrollY > 100 ? "Voltar ao topo" : "Explorar"}
+    </span>
+    <i class="{scrollY > 100 ? 'fa-arrow-up' : 'fa-arrow-down'} fa-solid group-hover:translate-y-0.5 transition-transform"></i>
+  </button>
 </div>
-
-<style>
-  .page-container {
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-    background: #1a1a1a;
-  }
-
-  .fixed-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .section {
-    position: relative;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start; /* Align content to the left */
-    z-index: 2;
-    padding: 2rem;
-    pointer-events: none;
-  }
-
-  .content {
-    pointer-events: auto;
-    max-width: 40%; /* Limit width to leave room for model */
-    margin-left: 10%; /* Position on the left */
-    text-align: left;
-    color: white;
-    padding: 2rem;
-    background: rgba(26, 26, 26, 0.6);
-    backdrop-filter: blur(10px);
-    border-radius: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .title {
-    font-size: 3rem;
-    margin: 0 0 1rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #10b981 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-weight: 800;
-  }
-
-  .text {
-    font-size: 1.5rem;
-    margin: 0 0 1.5rem;
-    opacity: 0.9;
-    font-weight: 600;
-    color: #e2e8f0;
-  }
-
-  .description {
-    font-size: 1.125rem;
-    line-height: 1.6;
-    opacity: 0.8;
-    margin: 0;
-    color: #cbd5e1;
-  }
-
-  @media (max-width: 768px) {
-    .section {
-      justify-content: center;
-    }
-
-    .content {
-      margin-left: 0;
-      max-width: 90%;
-      margin-top: 50vh; /* Push content down on mobile */
-      background: rgba(26, 26, 26, 0.85);
-    }
-
-    .title {
-      font-size: 2rem;
-    }
-  }
-
-  .scroll-fab {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    color: white;
-    z-index: 100;
-    pointer-events: auto;
-    animation: bounce 2s infinite;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 0.8rem 1.5rem;
-    border-radius: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    font-family: inherit;
-    font-weight: 600;
-  }
-
-  @keyframes bounce {
-    0%,
-    20%,
-    50%,
-    80%,
-    100% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-10px);
-    }
-    60% {
-      transform: translateY(-5px);
-    }
-  }
-</style>
